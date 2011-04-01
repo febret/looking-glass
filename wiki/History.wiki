@@ -2,7 +2,7 @@
 
 = Looking Glass 2.6.1 =
 First version on google code. No significant code changes, just fixed some minor dataset issues
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.6 =
 == Changes==
@@ -11,7 +11,7 @@ First version on google code. No significant code changes, just fixed some minor
  * Mission / dive selector is more intuitive.
  * Table view allows selection of columns.
  * Table view shows only selected data if something is selected. Filtered data otherwise.
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.5 =
 == Changes ==
