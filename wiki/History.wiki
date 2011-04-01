@@ -20,7 +20,7 @@ First version on google code. No significant code changes, just fixed some minor
  * The sonde-based bathymetry model is not being generated in this version.
  * Sonde drop picking is still acting weird on some drops (picking the wrong drop)
  * Plot legend and curve coloring is not working for some drops. Clicking two times on a drop appears to solve this issue sometmes
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.4 =
 == Changes ==
@@ -33,7 +33,7 @@ First version on google code. No significant code changes, just fixed some minor
  * The sonde-based bathymetry model is not being generated in this version.       
  * Sonde drop picking is still acting weird on some drops (picking the wrong drop)
  * Plot legend and curve coloring is not working for some drops. Clicking two times on a drop appears to solve this issue sometimes
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.3 =
 == Fixes ==
@@ -48,7 +48,7 @@ First version on google code. No significant code changes, just fixed some minor
 == Known Issues ==
  * DataField manager add field button is not working. Right now derived fields have to be added by hand in the application configuration file.
  * The sonde-based bathymetry model is not being generated in this version.
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.2 =
 ==Changes==
@@ -64,7 +64,7 @@ First version on google code. No significant code changes, just fixed some minor
  * Sonde drop picking is working incorrectly sometimes.
  * When selection a station where multiple drops have been performed, the plot line draws are incorrect.
  * The sonde-based bathymetry model is not being generated in this version.
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.1 =
 ==Fixes==
@@ -80,7 +80,7 @@ First version on google code. No significant code changes, just fixed some minor
  * Sonde drop picking is working incorrectly sometimes.
  * When selection a station where multiple drops have been performed, the plot line draws are incorrect.
  * The sonde-based bathymetry model is not being generated in this version.
-<br/><br/><br/><br/>
+-------------------------------------------------------------
 
 = Looking Glass 2.0 =
 ==Changes==
