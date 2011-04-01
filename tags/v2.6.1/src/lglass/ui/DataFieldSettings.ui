@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DataFieldSettings</class>
+ <widget class="QDockWidget" name="DataFieldSettings">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>651</width>
+    <height>284</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>651</width>
+    <height>284</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>View Options</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Fields</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QListWidget" name="fieldList"/>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QLineEdit" name="fieldNameBox"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="addFieldOkButton">
+             <property name="text">
+              <string>Ok</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="addFieldCancelButton">
+             <property name="text">
+              <string>Cancel</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="addFieldButton">
+             <property name="text">
+              <string>Add Field</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="removeFieldButton">
+             <property name="text">
+              <string>Remove Field</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="fieldSettingsGroup">
+        <property name="title">
+         <string>Field Settings</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <layout class="QFormLayout" name="formLayout_2">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Label</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="labelBox"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QRadioButton" name="indexCheck">
+             <property name="text">
+              <string>Source Data Index</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QSpinBox" name="indexBox"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QRadioButton" name="exprCheck">
+             <property name="text">
+              <string>Expression</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="exprBox"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QRadioButton" name="scriptCheck">
+             <property name="text">
+              <string>Script</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="scriptBox"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>NOTE: Quick Update will only recompute this field. Dependent fields will not be recalculated. If other fields in the dataset are dependent on this one, perform a FULL UPDATE to avoid inconsistencies.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <widget class="QPushButton" name="quickUpdateButton">
+             <property name="text">
+              <string>Quick Update</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="fullUpdateButton">
+             <property name="text">
+              <string>Full Update</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
