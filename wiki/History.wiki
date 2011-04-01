@@ -1,0 +1,13 @@
+#Looking glass release history
+
+= Looking Glass 2.6.1 =
+First version on google code. No significant code changes, just fixed some minor dataset issues
+
+= Looking Glass 2.6 =
+== Changes==
+ * Added plot label options.
+ * Fixed plot labels and plot curve generation in general is working much better.
+ * Mission / dive selector is more intuitive.
+ * Table view allows selection of columns.
+ * Table view shows only selected data if something is selected. Filtered data otherwise.
+
