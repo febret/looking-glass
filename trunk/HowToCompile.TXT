@@ -1,0 +1,37 @@
+How To Compile LookingGlass
+-------------------------------------------------------------------------------
+This guide briefly explains how to compile Looking Glass
+
+1 - PREREQUISITES:
+-------------------------------------------------------------------------------
+- Qt Source (TESTED WITH Qt 4.5)
+- Vtk Source (TESTED WITH VTK 5.4.2)
+- The CMake build environment (Download from [...])
+- OpenCL (used by some of the tools)
+
+2 - INSTALLING / COMPILING QT:
+-------------------------------------------------------------------------------
+Follow the guide in [...]
+[DO WE NEED TO COMPILE QT TO HAVE IT WORKING WITH VTK? DOUBLE CHECK THIS.]
+
+3 - COMPILING VTK
+-------------------------------------------------------------------------------
+- Follow the guide in [vtk-install-dir]/Readme.html
+- When generating you platform specific build files with CMake remember to specify 
+the following options to enable building of the Qt VTK Widget:
+    - Between Advanced options enable GUI_SUPPORT
+    - Run again, and enable QT, specify version 4
+- After these ops you should be able to correctly compile Vtk.
+FOR VISUAL STUDIO 2010
+- apply patch explained here: http://permalink.gmane.org/gmane.comp.lib.vtk.user/48410
+
+4 - SETTING UP OPENCL:
+-------------------------------------------------------------------------------
+The include and library directories must be part of your system path or
+made available in other wais to the build environment (.e. in 
+Visual studio add the corresponding OpenCL paths to the Library and Include
+directory lists)
+
+4 - COMPILING LOOKING GLASS
+-------------------------------------------------------------------------------
+Just generate your platform specific build files using CMake and build.

@@ -1,0 +1,20 @@
+<RCC>
+  <qresource prefix="images" >
+    <file>Splash.png</file>
+    <file>SuiteSplash.png</file>
+  </qresource>
+  <qresource prefix="icons" >
+    <file>picture_save.png</file>
+    <file>fullview.png</file>
+    <file>zoom_in.png</file>
+    <file>table.png</file>
+    <file>ColorFunctionManager.png</file>
+    <file>GeoDataView.png</file>
+    <file>glacier_toolset.png</file>
+    <file>LookingGlass.png</file>
+    <file>NavigationView.png</file>
+    <file>PlotView.png</file>
+    <file>SliceView.png</file>
+    <file>sonde_toolset.png</file>
+  </qresource>
+</RCC>
