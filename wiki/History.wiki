@@ -11,3 +11,23 @@ First version on google code. No significant code changes, just fixed some minor
  * Table view allows selection of columns.
  * Table view shows only selected data if something is selected. Filtered data otherwise.
 
+= Looking Glass 2.5 =
+== Changes ==
+ * Added plot preference support
+== Known Issues ==
+ * The sonde-based bathymetry model is not being generated in this version.
+ * Sonde drop picking is still acting weird on some drops (picking the wrong drop)
+ * Plot legend and curve coloring is not working for some drops. Clicking two times on a drop appears to solve this issue sometmes
+
+
+= Looking Glass 2.4 =
+== Changes ==
+ * Dataset supports a new additional Tag field (Tag3)
+ * Added support multiple drop picking (ctrl-click)
+ * Optimized initial data loading
+ * Mission range tool now updates plots in real time
+== Known Issues ==
+ * DataField manager add field button is not working. Right now derived fields have to be added by hand in the application configuration file.
+ * The sonde-based bathymetry model is not being generated in this version.       
+ * Sonde drop picking is still acting weird on some drops (picking the wrong drop)
+ * Plot legend and curve coloring is not working for some drops. Clicking two times on a drop appears to solve this issue sometmes
