@@ -123,9 +123,6 @@ void VisualizationManager::Initialize(DataSet* dataSet)
 	myGeoDataView->Initialize();
 	//myGeoDataView->Enable();
 
-	// Init error markers data (must be done AFTER geo data view initialization)
-	InitErrorMapData();
-
 	// myGeoDataView->SetupBathyErrorMap();
 
 	myNavigationView = new NavigationView(this);
@@ -220,29 +217,6 @@ void VisualizationManager::InitSonde()
 
     myRenderer->AddActor(mySondeActor);
     myRenderer->AddActor2D(myScalarBar);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-void VisualizationManager::InitErrorMapData()
-{
-	myNumErrorMarkers = myDataSet->GetSondeBathyData()->GetNumberOfPoints();
-	
-	// Allocate arro marker arrays.
-	myOldVsSondeDepthError = new double[myNumErrorMarkers];
-	myOldVsSonarDepthError = new double[myNumErrorMarkers];
-	mySondeVsSonarDepthError = new double[myNumErrorMarkers];
-
-	for(int i = 0; i < myNumErrorMarkers; i++)
-	{
-		// Compute the error marker values.
-		double* pt = myDataSet->GetSondeBathyData()->GetPoint(i);
-		double oldDepth = myGeoDataView->GetDepthAt(pt[0], pt[2], false);
-		double sonarDepth = myGeoDataView->GetDepthAt(pt[0], pt[2], true);
-
-		myOldVsSondeDepthError[i] = pt[1] - oldDepth;
-		myOldVsSonarDepthError[i] = sonarDepth - oldDepth;
-		mySondeVsSonarDepthError[i] = sonarDepth - pt[1];
-	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -358,62 +332,6 @@ void VisualizationManager::SetDepthScale(int value)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-double VisualizationManager::GetErrorMarkerMean()
-{
-	double result = 0;
-	for(int i = 0; i < myNumErrorMarkers; i++)
-	{
-		switch(myErrorMarkerMode)
-		{
-		case ErrorMarkerMode::OldVsSonde:
-			result += myOldVsSondeDepthError[i];
-			break;
-		case ErrorMarkerMode::OldVsSonar:
-			result += myOldVsSonarDepthError[i];
-			break;
-		case ErrorMarkerMode::SondeVsSonar:
-			result += mySondeVsSonarDepthError[i];
-			break;
-		}
-	}
-	return result / myNumErrorMarkers;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-double VisualizationManager::GetErrorMarkerStdDev()
-{
-	double result = 0;
-	double mean = GetErrorMarkerMean();
-	for(int i = 0; i < myNumErrorMarkers; i++)
-	{
-		double tmp;
-		switch(myErrorMarkerMode)
-		{
-		case ErrorMarkerMode::OldVsSonde:
-			tmp = myOldVsSondeDepthError[i] - mean;
-			result += tmp * tmp;
-			break;
-		case ErrorMarkerMode::OldVsSonar:
-			tmp = myOldVsSonarDepthError[i] - mean;
-			result += tmp * tmp;
-			break;
-		case ErrorMarkerMode::SondeVsSonar:
-			tmp = mySondeVsSonarDepthError[i] - mean;
-			result += tmp * tmp;
-			break;
-		}
-	}
-	result = sqrt(result / myNumErrorMarkers);
-	return result;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-void VisualizationManager::SetErrorMarkerMode(ErrorMarkerMode::Enum mode)
-{
-	myErrorMarkerMode = mode;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 //void VisualizationManager::InitIsosurfaces()
 //{
 //	myIsosurfaceVolumeBuilder = vtkShepardMethod::New();
@@ -521,25 +439,6 @@ void VisualizationManager::OnEndInteraction()
 					pdi->Tag1, DataSetInfo::Tag1, 
 					DataSet::FilteredData, 
 					addToSelection ? DataSet::SelectionToggle : DataSet::SelectionNew);
-
-				// Get sonde based depth at the specified point.
-				// The value returned here is already water-level corrected.
-				ptId = myDataSet->GetSondeBathyData()->FindPoint(
-					Y[0], myPointFilter->GetOutput()->GetPoint(ptId)[1], X[0]);
-
-				float oldDepth = myGeoDataView->GetDepthAt(Y[0], X[0], false);
-				float sonarDepth = myGeoDataView->GetDepthAt(Y[0], X[0], true);
-				float sondeDepth = myDataSet->GetSondeBathyData()->GetPoint(ptId)[1];
-				//char str[256];
-				//float levelCorrection = DataSet::GetWaterLevelCorrection((int)Day[0]);
-				//sprintf(str, "Point UTM: E%d N%d | Depth: (Old)%.2fm (Sonar)%.2fm (Sonde)%.2fm (Corrected Sonde)%.2fm | Water Lvl Correction: %.2fm", 
-				//	(int)X, (int)Y, 
-				//	oldDepth,
-				//	sonarDepth,
-				//	sondeDepth + levelCorrection, // To get the original sonde-based depth we have to inver water level correction
-				//	sondeDepth,
-				//	levelCorrection);
-				//printf("%s\n", str);
 			}
 			// Release allocated arrays.
 			arX->Delete();

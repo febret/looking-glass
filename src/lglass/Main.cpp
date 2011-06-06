@@ -24,7 +24,6 @@
 #include "DataSet.h"
 #include "GeoDataView.h"
 #include "VisualizationManager.h"
-#include "GlacierVisualizationManager.h"
 #include "ToolsetSetupWindow.h"
 #include "AppConfig.h"
 #include "ProgressWindow.h"
@@ -92,7 +91,7 @@ int main(int argc, char *argv[])
 	AppConfig::Initialize(selectedProfile);
 
 	// Initialize the data file manager and sync the local data cache to the remote repository.
-	RepositoryManager::Initialize();
+	RepositoryManager::Initialize(&a);
 
 	// Check application version.
 	QString rver = AppConfig::GetInstance()->GetRequiredAppVersion();
@@ -101,7 +100,7 @@ int main(int argc, char *argv[])
 		// Damn, wrong version. Look if the right executable is present on the local cache. Otherwise download it.
 		Console::Message(QString("Currect application version: %1 required version is %2").arg(LOOKING_GLASS_VERSION ).arg(rver));
 
-		RepositoryManager::GetInstance()->SyncAppVersion(rver, a);
+		RepositoryManager::GetInstance()->SyncAppVersion(rver);
 
 		// Run the external version of the app.
 		QString cmdLine = "./app/lglass-" + rver + ".exe " + selectedProfile;
@@ -112,7 +111,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	RepositoryManager::GetInstance()->SyncToRepository(a);
+	RepositoryManager::GetInstance()->SyncToRepository();
 
 	// Setup splash screen.
     QSplashScreen splashScreen(QPixmap(":/images/Splash.png"));

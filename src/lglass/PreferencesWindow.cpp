@@ -90,20 +90,20 @@ void PreferencesWindow::Update()
 
 	GeoDataView* gdv = myVizMng->GetGeoDataVew();
 	myUI->reductionSlider->setValue(myVizMng->GetPointReductionFactor());
-	myOldBathyColorButton->setChosenColor(gdv->GetOldBathyColor());
-	mySondeBathyColorButton->setChosenColor(gdv->GetSondeBathyColor());
-	myOldBathyContourButton->setChosenColor(gdv->GetOldBathyContourColor());
-	mySondeBathyContourButton->setChosenColor(gdv->GetSondeBathyContourColor());
+	//myOldBathyColorButton->setChosenColor(gdv->GetOldBathyColor());
+	//mySondeBathyColorButton->setChosenColor(gdv->GetSondeBathyColor());
+	//myOldBathyContourButton->setChosenColor(gdv->GetOldBathyContourColor());
+	//mySondeBathyContourButton->setChosenColor(gdv->GetSondeBathyContourColor());
 
-	myUI->xLabelsBox->setValue(pref->GetPlotXLabels());
-	myUI->yLabelsBox->setValue(pref->GetPlotYLabels());
+	//myUI->xLabelsBox->setValue(pref->GetPlotXLabels());
+	//myUI->yLabelsBox->setValue(pref->GetPlotYLabels());
 	myUI->labelFontSizeBox->setValue(pref->GetPlotLabelFontSize());
 
 	myPlotBackgroundButton->setChosenColor(pref->GetPlotBackgroundColor());
 	myPlotForegroundButton->setChosenColor(pref->GetPlotForegroundColor());
 	myPlotDataDefaultButton->setChosenColor(pref->GetPlotDefaultDataColor());
 
-	myUI->plotAdjustLabelsChoice->setChecked(pref->GetAdjustPlotLabels());
+	//myUI->plotAdjustLabelsChoice->setChecked(pref->GetAdjustPlotLabels());
 	myUI->plotLegendChoice->setChecked(pref->GetPlotLegend());
 	myUI->plotPointsChoice->setChecked(pref->GetPlotPoints());
 
@@ -137,14 +137,14 @@ void PreferencesWindow::OnOkButtonClick()
 	GeoDataView* gdv = myVizMng->GetGeoDataVew();
 	NavigationView* mr = myVizMng->GetNavigationView();
 	myVizMng->SetPointReductionFactor(myUI->reductionSlider->value());
-	gdv->SetOldBathyColor(myOldBathyColorButton->chosenColor());
-	gdv->SetOldBathyContourColor(myOldBathyContourButton->chosenColor());
-	gdv->SetSondeBathyColor(mySondeBathyColorButton->chosenColor());
-	gdv->SetSondeBathyContourColor(mySondeBathyContourButton->chosenColor());
+	//gdv->SetOldBathyColor(myOldBathyColorButton->chosenColor());
+	//gdv->SetOldBathyContourColor(myOldBathyContourButton->chosenColor());
+	//gdv->SetSondeBathyColor(mySondeBathyColorButton->chosenColor());
+	//gdv->SetSondeBathyContourColor(mySondeBathyContourButton->chosenColor());
 	//mr->SetMissionPathColor(myMissionPathButton->chosenColor());
 
-	pref->SetPlotXLabels(myUI->xLabelsBox->value());
-	pref->SetPlotYLabels(myUI->yLabelsBox->value());
+	//pref->SetPlotXLabels(myUI->xLabelsBox->value());
+	//pref->SetPlotYLabels(myUI->yLabelsBox->value());
 	pref->SetPlotLabelFontSize(myUI->labelFontSizeBox->value());
 
 	pref->SetPlotForegroundColor(myPlotForegroundButton->chosenColor());
@@ -154,7 +154,7 @@ void PreferencesWindow::OnOkButtonClick()
 	myVizMng->SetDepthScale(myUI->scaleSlider->value());
 
 	pref->SetPlotLegend(myUI->plotLegendChoice->isChecked());
-	pref->SetAdjustPlotLabels(myUI->plotAdjustLabelsChoice->isChecked());
+	//pref->SetAdjustPlotLabels(myUI->plotAdjustLabelsChoice->isChecked());
 	pref->SetPlotPoints(myUI->plotPointsChoice->isChecked());
 
 	DataSet::SubsetType subset = (DataSet::SubsetType)myUI->plotSourceBox->currentIndex();

@@ -5,6 +5,7 @@
   </qresource>
   <qresource prefix="icons" >
     <file>picture_save.png</file>
+    <file>refresh.png</file>
     <file>fullview.png</file>
     <file>zoom_in.png</file>
     <file>table.png</file>
