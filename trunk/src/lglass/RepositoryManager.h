@@ -19,14 +19,14 @@ class RepositoryManager: public QObject
 {
 	Q_OBJECT
 public:
-	static void Initialize();
+	static void Initialize(QApplication* app);
 	static RepositoryManager* GetInstance() { return myInstance; }
 
-	RepositoryManager();
+	RepositoryManager(QApplication* app);
 	~RepositoryManager();
 
-	void SyncToRepository(QApplication& app);
-	void SyncAppVersion(QString& ver, QApplication& app);
+	void SyncToRepository();
+	void SyncAppVersion(QString& ver);
 	QFile* TryOpen(const QString& fileName);
 
 signals:
@@ -38,6 +38,8 @@ protected slots:
 
 private:
 	static RepositoryManager* myInstance;
+
+	QApplication* myApplication;
 
 	QString myLocalPath;
 	QString myLocalFilePath;

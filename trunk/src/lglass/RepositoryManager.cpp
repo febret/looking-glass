@@ -19,13 +19,14 @@ using namespace libconfig;
 RepositoryManager* RepositoryManager::myInstance;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void RepositoryManager::Initialize()
+void RepositoryManager::Initialize(QApplication* app)
 {
-	myInstance = new RepositoryManager();
+	myInstance = new RepositoryManager(app);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-RepositoryManager::RepositoryManager()
+RepositoryManager::RepositoryManager(QApplication* app):
+	myApplication(app)
 {
 	myLoader = new QHttp();
 
@@ -53,7 +54,22 @@ QFile* RepositoryManager::TryOpen(const QString& fileName)
 	}
 	else
 	{
-		// Request HTTP;
+		Config* c = AppConfig::GetInstance()->GetDataConfig();
+
+		string repoHost = (string)c->lookup("Application/RepositoryHost");
+		string repoUri = (string)c->lookup("Application/RepositoryURI");
+		string profileName = (string)c->lookup("Application/ProfileName");
+
+		QString localFilePath = QString("./%1/%2").arg(profileName.c_str()).arg(fileName);
+		myLocalFilePath = localFilePath;
+		QString remoteFilePath = QString("%1/%2").arg(repoUri.c_str()).arg(fileName);
+
+		myDone = false;
+		ProgressWindow::GetInstance()->SetItemName(QString("Downloading %1").arg(remoteFilePath));
+		myLoader->get(remoteFilePath);
+		while(!myDone) myApplication->processOneEvent();
+
+		return TryOpen(fileName);
 	}
 	return NULL;
 }
@@ -88,7 +104,7 @@ void RepositoryManager::OnLoaderProgress(int done, int total)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void RepositoryManager::SyncAppVersion(QString& ver, QApplication& app)
+void RepositoryManager::SyncAppVersion(QString& ver)
 {
 	Config* c = AppConfig::GetInstance()->GetDataConfig();
 	string repoHost = (string)c->lookup("Application/RepositoryHost");
@@ -116,14 +132,14 @@ void RepositoryManager::SyncAppVersion(QString& ver, QApplication& app)
 		ProgressWindow::GetInstance()->SetItemName(QString("Downloading Application %1 Binary").arg(ver));
 		myLoader->get(remoteFilePath);
 
-		while(!myDone) app.processOneEvent();
+		while(!myDone) myApplication->processOneEvent();
 	}
 
 	ProgressWindow::GetInstance()->Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void RepositoryManager::SyncToRepository(QApplication& app)
+void RepositoryManager::SyncToRepository()
 {
 	Config* c = AppConfig::GetInstance()->GetDataConfig();
 
@@ -158,7 +174,7 @@ void RepositoryManager::SyncToRepository(QApplication& app)
 			ProgressWindow::GetInstance()->SetItemName(QString("Downloading %1").arg(remoteFilePath));
 			myLoader->get(remoteFilePath);
 
-			while(!myDone) app.processOneEvent();
+			while(!myDone) myApplication->processOneEvent();
 		}
 	}
 

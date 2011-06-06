@@ -1,14 +1,33 @@
-/********************************************************************************************************************** 
+/**************************************************************************************************
  * THE LOOKING GLASS VISUALIZATION TOOLSET
- *---------------------------------------------------------------------------------------------------------------------
+ *-------------------------------------------------------------------------------------------------
  * Author: 
- *	Alessandro Febretti							Electronic Visualization Laboratory, University of Illinois at Chicago
+ *	Alessandro Febretti		Electronic Visualization Laboratory, University of Illinois at Chicago
  * Contact & Web:
- *  febret@gmail.com							http://febretpository.hopto.org
- *---------------------------------------------------------------------------------------------------------------------
+ *  febret@gmail.com		http://febretpository.hopto.org
+ *-------------------------------------------------------------------------------------------------
  * Looking Glass has been built as part of the ENDURANCE Project (http://www.evl.uic.edu/endurance/).
  * ENDURANCE is supported by the NASA ASTEP program under Grant NNX07AM88G and by the NSF USAP.
- *********************************************************************************************************************/ 
+ *-------------------------------------------------------------------------------------------------
+ * Copyright (c) 2010-2011, Electronic Visualization Laboratory, University of Illinois at Chicago
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted 
+ * provided that the following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice, this list of conditions 
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other 
+ * materials provided with the distribution. 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE  GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *************************************************************************************************/ 
 #include "AppConfig.h"
 #include "Preferences.h"
 #include "PlotView.h"
@@ -105,6 +124,12 @@ void PlotView::SetupUI()
         myUI->yAxisBox->addItem(data->GetFieldName(i), i);
     }
 	
+	myUI->xLegendPositionSlider->setValue(70);
+	myUI->yLegendPositionSlider->setValue(0);
+	myUI->plotXSlider->setValue(0);
+	myUI->plotWidthSlider->setValue(100);
+
+	//myUI->layoutBox->setVisible(false);
 	// Setup some default plot to show something.
 	myUI->xAxisBox->setCurrentIndex(0);
 	myUI->yAxisBox->setCurrentIndex(1);
@@ -113,6 +138,27 @@ void PlotView::SetupUI()
     connect(myUI->yAxisBox, SIGNAL(currentIndexChanged(int)), SLOT(OnAxisFieldChanged(int)));
 	connect(myUI->viewAllButton, SIGNAL(clicked()),	SLOT(OnViewAllButtonClicked()));
 	connect(myUI->exportImageButton, SIGNAL(clicked()),	SLOT(OnExportImageButtonClicked()));
+
+	connect(myUI->xRangeMinBox, SIGNAL(valueChanged(double)), SLOT(OnRangeChanged()));
+	connect(myUI->yRangeMinBox, SIGNAL(valueChanged(double)), SLOT(OnRangeChanged()));
+	connect(myUI->xRangeMaxBox, SIGNAL(valueChanged(double)), SLOT(OnRangeChanged()));
+	connect(myUI->yRangeMaxBox, SIGNAL(valueChanged(double)), SLOT(OnRangeChanged()));
+
+	connect(myUI->xMinorTicksBox, SIGNAL(valueChanged(int)), SLOT(SetPlotProperties()));
+	connect(myUI->xMajorTicksBox, SIGNAL(valueChanged(int)), SLOT(SetPlotProperties()));
+	connect(myUI->yMinorTicksBox, SIGNAL(valueChanged(int)), SLOT(SetPlotProperties()));
+	connect(myUI->yMajorTicksBox, SIGNAL(valueChanged(int)), SLOT(SetPlotProperties()));
+
+	connect(myUI->xReferenceEnabledBox, SIGNAL(toggled(bool)), SLOT(OnReferenceLinesChanged()));
+	connect(myUI->yReferenceEnabledBox, SIGNAL(toggled(bool)), SLOT(OnReferenceLinesChanged()));
+	connect(myUI->xReferenceBox, SIGNAL(valueChanged(double)), SLOT(OnReferenceLinesChanged()));
+	connect(myUI->yReferenceBox, SIGNAL(valueChanged(double)), SLOT(OnReferenceLinesChanged()));
+
+	connect(myUI->yLegendPositionSlider, SIGNAL(valueChanged(int)), SLOT(OnLegendPositionChanged()));
+	connect(myUI->xLegendPositionSlider, SIGNAL(valueChanged(int)), SLOT(OnLegendPositionChanged()));
+	connect(myUI->plotXSlider, SIGNAL(valueChanged(int)), SLOT(OnLegendPositionChanged()));
+	connect(myUI->plotWidthSlider, SIGNAL(valueChanged(int)), SLOT(OnLegendPositionChanged()));
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,6 +186,12 @@ void PlotView::SetPlotProperties()
 
 	myPlot->GetLegendActor()->SetDragable(0);
 	myPlot->SetLegend(prefs->GetPlotLegend() ? 1 : 0);
+
+	float plotX = (float)myUI->plotXSlider->value() / 100;
+	float plotWidth = (float)myUI->plotWidthSlider->value() / 100;
+    myPlot->SetWidth(plotWidth);
+	myPlot->SetPosition(plotX, 0);
+
 	if(prefs->GetPlotLegend())
 	{
 		DataSet* data = myVizMng->GetDataSet();
@@ -152,11 +204,21 @@ void PlotView::SetPlotProperties()
 			if(grp->Size > 0) nonEmptyGroups++;
 		}
 
+		// Take into account enabled reference lines when sizing legend box.
+		if(myUI->xReferenceEnabledBox->isChecked()) nonEmptyGroups++;
+		if(myUI->yReferenceEnabledBox->isChecked()) nonEmptyGroups++;
+
 		int* size = myPlotRenderWindow->GetSize();
 		float yPos = (float)nonEmptyGroups * 20 / size[1];
 		if(yPos > 1) yPos = 1;
 
-		myPlot->SetLegendPosition(0.7f, 1 - yPos);
+		float xpp = (float)myUI->xLegendPositionSlider->value() / 100;
+		float ypp = (float)myUI->yLegendPositionSlider->value() / 100;
+		//xpp *= 1 / plotWidth;
+		//float xpp = 1;
+		//float ypp = 0;
+
+		myPlot->SetLegendPosition(xpp, 1 - yPos - ypp);
 		myPlot->SetLegendPosition2(0.3f, yPos);
 	}
 
@@ -188,12 +250,19 @@ void PlotView::SetPlotProperties()
 	myPlot->GetProperty()->SetLineWidth(2);
 
 	// Set axis labels properties.
-	myPlot->SetAdjustXLabels(prefs->GetAdjustPlotLabels());
-	myPlot->SetAdjustYLabels(prefs->GetAdjustPlotLabels());
-	myPlot->SetNumberOfXLabels(prefs->GetPlotXLabels());
-	myPlot->SetNumberOfXMinorTicks(5);
-	myPlot->SetNumberOfYLabels(prefs->GetPlotYLabels());
-	myPlot->SetNumberOfYMinorTicks(5);
+	//myPlot->SetAdjustXLabels(prefs->GetAdjustPlotLabels());
+	//myPlot->SetAdjustYLabels(prefs->GetAdjustPlotLabels());
+	
+	myPlot->SetAdjustXLabels(0);
+	myPlot->SetAdjustYLabels(0);
+
+	myPlot->SetNumberOfXLabels(myUI->xMajorTicksBox->value());
+	myPlot->SetNumberOfXMinorTicks(myUI->xMinorTicksBox->value());
+
+	myPlot->SetNumberOfYLabels(myUI->yMajorTicksBox->value());
+	myPlot->SetNumberOfYMinorTicks(myUI->yMinorTicksBox->value());
+
+	myPlotRenderWindow->Render();
 }
 
 
@@ -251,22 +320,22 @@ void PlotView::Update()
 		vtkFieldData* selectedFieldData = NULL;
 		vtkDataObject *selectedDataObject = NULL;
 
-		int grps = data->GetNumGroups();
+		int grps = data->GetNumSortedGroups();
 
-		int nonEmptyGroups = 0;
-		for(int i = 0; i < grps; i++)
+		//int nonEmptyGroups = grps;
+		/*for(int i = 0; i < grps; i++)
 		{
 			DataGroup* grp = data->GetGroup(i);
 			if(grp->Size > 0) nonEmptyGroups++;
-		}
+		}*/
 
 		// Check the plot limit.
-		if(nonEmptyGroups > 500)
+		if(grps > 500)
 		{
 			Console::Error("PLOT LIMIT REACHED: Cannot plot more than 500 curves.");
 			ShutdownApp(true, false);
 		}
-		if(nonEmptyGroups > 100)
+		if(grps > 100)
 		{
 			QMessageBox::StandardButton btn = QMessageBox::question(
 				NULL, 
@@ -283,9 +352,29 @@ void PlotView::Update()
 		//myPlot->GetLegendActor()->SetNumberOfEntries(nonEmptyGroups);
 
 		int c = 0;
+		if(myUI->xReferenceEnabledBox->isChecked())
+		{
+			float x1 = (float)myUI->xReferenceBox->value();
+			float x2 = (float)myUI->xReferenceBox->value();
+			float y1 = (float)myUI->yRangeMinBox->value();
+			float y2 = (float)myUI->yRangeMaxBox->value();
+
+			AddReferenceLine(c, x1, y1, x2, y2, myUI->xAxisBox->currentText(), myUI->xReferenceBox->value());
+			c++;
+		}
+		if(myUI->yReferenceEnabledBox->isChecked())
+		{
+			float y1 = (float)myUI->yReferenceBox->value();
+			float y2 = (float)myUI->yReferenceBox->value();
+			float x1 = (float)myUI->xRangeMinBox->value();
+			float x2 = (float)myUI->xRangeMaxBox->value();
+
+			AddReferenceLine(c, x1, y1, x2, y2, myUI->yAxisBox->currentText(), myUI->yReferenceBox->value());
+			c++;
+		}
 		for(int i = 0; i < grps; i++)
 		{
-			DataGroup* grp = data->GetGroup(i);
+			DataGroup* grp = data->GetSortedGroup(i);
 			if(grp->Size > 0)
 			{
 				vtkFloatArray* xData = vtkFloatArray::New();
@@ -312,7 +401,7 @@ void PlotView::Update()
 				selectedFieldData->Delete();
 				selectedDataObject->Delete();
 
-				float colorWeight = (float)c / (nonEmptyGroups - 1);
+				float colorWeight = (float)c / (grps - 1);
 				double* color = colorMap->GetColor(colorWeight);
 				myPlot->SetPlotColor(c + 1, color);
 
@@ -325,6 +414,7 @@ void PlotView::Update()
 			}
 		}
 
+
 		//myPlot->Modified();
 		//myPlotRenderer->Render();
 		//myPlot->GetLegendActor()->GetEntryTextProperty()->SetFontFamilyToCourier();
@@ -332,6 +422,42 @@ void PlotView::Update()
 
 		myPlot->SetPlotLabel(0, "Other datapoints");
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void PlotView::AddReferenceLine(int c, float x1, float y1, float x2, float y2, QString name, float value)
+{
+	Preferences* prefs = AppConfig::GetInstance()->GetPreferences();
+
+	vtkFloatArray* xData = vtkFloatArray::New();
+	vtkFloatArray* yData = vtkFloatArray::New();
+
+	xData->InsertNextTuple1(x1);
+	xData->InsertNextTuple1(x2);
+	yData->InsertNextTuple1(y1);
+	yData->InsertNextTuple1(y2);
+
+	vtkFieldData* selectedFieldData = vtkFieldData::New();
+	selectedFieldData->AddArray(xData);
+	selectedFieldData->AddArray(yData);
+
+	vtkDataObject* selectedDataObject = vtkDataObject::New();
+	selectedDataObject->SetFieldData(selectedFieldData);
+
+	myPlot->AddDataObjectInput(selectedDataObject);
+	myPlot->SetPlotLines(c + 1, 1);
+
+	xData->Delete();
+	yData->Delete();
+	selectedFieldData->Delete();
+	selectedDataObject->Delete();
+
+	myPlot->SetPlotColor(c + 1, QCOLOR_TO_VTK(prefs->GetPlotForegroundColor()));
+
+	myPlot->SetDataObjectXComponent(c + 1, 0);
+	myPlot->SetDataObjectYComponent(c + 1, 1);
+	QString refLabel = QString("%1 = %2").arg(name).arg(value);
+	myPlot->SetPlotLabel(c + 1, refLabel);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -369,9 +495,14 @@ void PlotView::OnSelectionChanged(int* sel)
 
 	if(myUI->zoomButton->isChecked())
 	{
-		myPlot->SetXRange(x1, x2);
-		myPlot->SetYRange(y1, y2);
-		myPlotRenderWindow->Render();
+		myUI->xRangeMinBox->setValue(x1);
+		myUI->xRangeMaxBox->setValue(x2);
+
+		myUI->yRangeMinBox->setValue(y1);
+		myUI->yRangeMaxBox->setValue(y2);
+
+		//OnRangeChanged();
+		//myPlotRenderWindow->Render();
 	}
 	else
 	{
@@ -390,6 +521,7 @@ void PlotView::OnSelectionChanged(int* sel)
 			myXFilter->Max = x2;
 			myYFilter->Enabled = true;
 			myYFilter->FieldId = yField;
+
 			myYFilter->Min = y1;
 			myYFilter->Max = y2;
 
@@ -402,6 +534,16 @@ void PlotView::OnSelectionChanged(int* sel)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void PlotView::OnAxisFieldChanged(int i)
 {
+	QString xAxis = myUI->xAxisBox->currentText();
+	QString yAxis = myUI->yAxisBox->currentText();
+
+	myUI->xRangeLabel->setText(xAxis + " range:");
+	myUI->yRangeLabel->setText(yAxis + " range:");
+	myUI->xTicksLabel->setText(xAxis + " ticks:");
+	myUI->yTicksLabel->setText(yAxis + " ticks:");
+	myUI->xReferenceEnabledBox->setText(xAxis + " reference line");
+	myUI->yReferenceEnabledBox->setText(yAxis + " reference line");
+
 	Update();
 	OnViewAllButtonClicked();
 }
@@ -415,6 +557,38 @@ void PlotView::OnViewAllButtonClicked()
 	float* yr = myVizMng->GetDataSet()->GetFieldRange(yField);
 	myPlot->SetXRange(xr[0], xr[1]);
 	myPlot->SetYRange(yr[0], yr[1]);
+
+	myUI->xRangeMinBox->setMinimum(xr[0]);
+	myUI->xRangeMaxBox->setMinimum(xr[0]);
+	myUI->xRangeMinBox->setMaximum(xr[1]);
+	myUI->xRangeMaxBox->setMaximum(xr[1]);
+	myUI->xReferenceBox->setMinimum(xr[0]);
+	myUI->xReferenceBox->setMaximum(xr[1]);
+
+	myUI->yRangeMinBox->setMinimum(yr[0]);
+	myUI->yRangeMaxBox->setMinimum(yr[0]);
+	myUI->yRangeMinBox->setMaximum(yr[1]);
+	myUI->yRangeMaxBox->setMaximum(yr[1]);
+	myUI->yReferenceBox->setMinimum(yr[0]);
+	myUI->yReferenceBox->setMaximum(yr[1]);
+
+	myUI->xRangeMinBox->setValue(xr[0]);
+	myUI->xRangeMaxBox->setValue(xr[1]);
+
+	myUI->yRangeMinBox->setValue(yr[0]);
+	myUI->yRangeMaxBox->setValue(yr[1]);
+
+	myPlotRenderWindow->Render();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void PlotView::OnRangeChanged()
+{
+	myPlot->SetXRange(myUI->xRangeMinBox->value(), myUI->xRangeMaxBox->value());
+	myPlot->SetYRange(myUI->yRangeMinBox->value(), myUI->yRangeMaxBox->value());
+
+	//myUI->zoomButton->setChecked(true);
+
 	myPlotRenderWindow->Render();
 }
 
@@ -422,4 +596,16 @@ void PlotView::OnViewAllButtonClicked()
 void PlotView::OnExportImageButtonClicked()
 {
 	Utils::SaveScreenshot(myPlotRenderWindow);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void PlotView::OnReferenceLinesChanged()
+{
+	Update();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void PlotView::OnLegendPositionChanged()
+{
+	SetPlotProperties();
 }

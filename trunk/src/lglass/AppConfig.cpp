@@ -35,7 +35,7 @@ AppConfig::AppConfig(const char* cfgFilename)
 	myConfig = new libconfig::Config();
 	myPreferences = new Preferences();
 
-	myPreferences->Load("./settings.cfg");
+	myPreferences->Load("./settings.lgcfg");
 
 	FILE* stream = fopen(cfgFilename, "r");
 	try
@@ -69,7 +69,7 @@ void AppConfig::Save(VisualizationManager* vizMng)
 	// Serialize window state.
 	myPreferences->SetWindowState(vizMng->GetMainWindow()->saveState());
 
-	myPreferences->Save("./settings.cfg");
+	myPreferences->Save("./settings.lgcfg");
 
 	// Save config.
 	myConfig->writeFile(myProfileName.ascii());

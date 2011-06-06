@@ -93,7 +93,7 @@ void Slice::SetDepth(float depth)
 	sprintf(myCaptionText, "Depth: %f meters", depth);
 	myCaption->SetInput(myCaptionText);
 	myPlane->SetOrigin(0, -depth * DataSet::SLICE_SEPARATION, 0);
-	myPlane->SetNormal(0, 1, 0);
+	myPlane->SetNormal(0, 0, 1);
 	myPlaneProbe->Modified();
 	myProbeMapper->Update();
 }
@@ -203,10 +203,10 @@ void SliceViewer::Initialize()
 	myBathyContour = vtkContourFilter::New();
 	myBathyContourMapper = vtkPolyDataMapper::New();
 
-	vtkPolyData* bathyData = myVizMng->GetGeoDataVew()->GetOldBathyReader()->GetOutput();
+	//vtkPolyData* bathyData = myVizMng->GetGeoDataVew()->GetOldBathyReader()->GetOutput();
 
-	myBathyContour->SetInput(bathyData);
-	myBathyContour->GenerateValues(5, bathyData->GetScalarRange());
+	//myBathyContour->SetInput(bathyData);
+	//myBathyContour->GenerateValues(5, bathyData->GetScalarRange());
 	myBathyContourMapper->SetInput(myBathyContour->GetOutput());
 	myBathyContourMapper->SetScalarVisibility(0);
 	myBathyContourMapper->Update();

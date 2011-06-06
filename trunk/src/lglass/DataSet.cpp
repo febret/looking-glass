@@ -1,15 +1,33 @@
-/********************************************************************************************************************** 
+/**************************************************************************************************
  * THE LOOKING GLASS VISUALIZATION TOOLSET
- *---------------------------------------------------------------------------------------------------------------------
+ *-------------------------------------------------------------------------------------------------
  * Author: 
- *	Alessandro Febretti							Electronic Visualization Laboratory, University of Illinois at Chicago
+ *	Alessandro Febretti		Electronic Visualization Laboratory, University of Illinois at Chicago
  * Contact & Web:
- *  febret@gmail.com							http://febretpository.hopto.org
- *---------------------------------------------------------------------------------------------------------------------
+ *  febret@gmail.com		http://febretpository.hopto.org
+ *-------------------------------------------------------------------------------------------------
  * Looking Glass has been built as part of the ENDURANCE Project (http://www.evl.uic.edu/endurance/).
  * ENDURANCE is supported by the NASA ASTEP program under Grant NNX07AM88G and by the NSF USAP.
- *********************************************************************************************************************/ 
-// Application Includes
+ *-------------------------------------------------------------------------------------------------
+ * Copyright (c) 2010-2011, Electronic Visualization Laboratory, University of Illinois at Chicago
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted 
+ * provided that the following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice, this list of conditions 
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other 
+ * materials provided with the distribution. 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE  GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *************************************************************************************************/ 
 #include "AppConfig.h"
 #include "RepositoryManager.h"
 #include "DataSet.h"
@@ -27,9 +45,9 @@ extern "C"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 DataSet::DataSet():
-	mySondeBathyDepthCorrection(1.5f),
 	myData(NULL),
-	myDataLength(0)
+	myDataLength(0),
+	myNumSortedGroups(0)
 {
 	// create info object.
 	myInfo = new DataSetInfo();
@@ -149,8 +167,6 @@ void DataSet::Load()
 	}
 
 	VtkDataManager::GetInstance()->Update(DataSet::AllData);
-
-	InitSondeBathyData();
 	ApplyFilters();
 }
 
@@ -186,32 +202,41 @@ void DataSet::UpdateField(int index)
 	}
 	else if(fi->GetType() == FieldInfo::Script)
 	{
-		QTextStream* scriptStream = new QTextStream(&fi->GetScript(), QIODevice::ReadOnly);
-		QString script = scriptStream->readAll();
-
-		script = script.replace("#out", "_r");
-		QStringList scriptLines = script.split('\n');
-
-		for(int i = 0; i < myDataLength; i++)
+		FILE* fl = fopen(fi->GetScript().ascii(), "r");
+		if(fl == NULL)
 		{
-			Utils::SetEvalVariables(myData[i], myInfo);
-			float value = 0;
-			
-			QListIterator<QString> li(scriptLines);
-			while(li.hasNext())
-			{
-				value = Utils::Eval(li.next());
-			}
-
-			myData[i].Field[index] = value;
-
-			// Update field ranges.
-			if(value < myFieldRange[index][0]) myFieldRange[index][0] = value;
-			if(value > myFieldRange[index][1]) myFieldRange[index][1] = value;
-
-			if(i % 100 == 0) pw->SetItemProgress(i * 100 / myDataLength);
+			Console::Message(QString("DataSet::UpdateField: cannot open script %1").arg(fi->GetScript()));
 		}
-		delete scriptStream;
+		else
+		{
+			QTextStream* scriptStream = new QTextStream(fl, QIODevice::ReadOnly);
+			QString script = scriptStream->readAll();
+
+			script = script.replace("#out", "_r");
+			QStringList scriptLines = script.split('\n');
+
+			for(int i = 0; i < myDataLength; i++)
+			{
+				Utils::SetEvalVariables(myData[i], myInfo);
+				float value = 0;
+				
+				QListIterator<QString> li(scriptLines);
+				while(li.hasNext())
+				{
+					value = Utils::Eval(li.next());
+				}
+
+				myData[i].Field[index] = value;
+
+				// Update field ranges.
+				if(value < myFieldRange[index][0]) myFieldRange[index][0] = value;
+				if(value > myFieldRange[index][1]) myFieldRange[index][1] = value;
+
+				if(i % 100 == 0) pw->SetItemProgress(i * 100 / myDataLength);
+			}
+			fclose(fl);
+			delete scriptStream;
+		}
 	}
 	else
 	{
@@ -230,6 +255,12 @@ void DataSet::UpdateField(int index)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void DataSet::LoadFile(const QString& name)
 {
+#ifdef _DEBUG
+	int dataFilter = 10;
+#else
+	int dataFilter = 1;
+#endif
+
 	//QString name = AppConfig::GetInstance()->GetProfileName() + "/" + filename;
 	Console::Message("Loading data file: " + name);
 
@@ -238,7 +269,7 @@ void DataSet::LoadFile(const QString& name)
 	pw->SetItemName(QString("Loading: %1").arg(name));
 	pw->SetItemProgress(0);
 
-	myDataLength = Utils::CountFileLines(name) - 1;
+	myDataLength = (Utils::CountFileLines(name) - 1) / dataFilter;
 
 	// Allocate data.
 	myData = new DataItem[myDataLength];
@@ -258,83 +289,86 @@ void DataSet::LoadFile(const QString& name)
 	int k = 0;
 	while(!line.isNull())
 	{
-		QStringList tokens = line.split(',');
-
-		// Parse date, time.
-		int tid = myInfo->GetTimestampTimeIndex();
-		int did = myInfo->GetTimestampDateIndex();
-
-		CheckTokenIndex(tokens, tid, k, "TimestampTimeIndex");
-		CheckTokenIndex(tokens, did, k, "TimestampDateIndex");
-
-		QString dtString = tokens[did] + " " + tokens[tid];
-		QDateTime dtm = QDateTime::fromString(dtString, myInfo->GetTimestampStringFormat());
-
-		int m = dtm.date().month();
-		int d = dtm.date().day();
-		int y = dtm.date().year();
-
-		if(!dtm.isValid())
+		if((k % dataFilter) == 0)
 		{
-			Console::Warning(QString("Invalid date and time at line %1: %2").arg(k + 2).arg(dtString));
-		}
-		else
-		{
-			myData[curIdx].Timestamp = dtm.toTime_t();
-			if(myData[curIdx].Timestamp < myTimestampRange[0]) myTimestampRange[0] = myData[curIdx].Timestamp;
-			if(myData[curIdx].Timestamp > myTimestampRange[1]) myTimestampRange[1] = myData[curIdx].Timestamp;
-		}
+			QStringList tokens = line.split(',');
 
-		// Read tags if present in specification
-		if(myInfo->GetTag1Index() != -1)
-		{
-			CheckTokenIndex(tokens, myInfo->GetTag1Index(), k, "Tag1Index");
-			strcpy(myData[curIdx].Tag1, tokens[myInfo->GetTag1Index()].ascii());
+			// Parse date, time.
+			int tid = myInfo->GetTimestampTimeIndex();
+			int did = myInfo->GetTimestampDateIndex();
 
-			if(!myTag1List.contains(myData[curIdx].Tag1)) myTag1List.insert(myData[curIdx].Tag1, 1);
-			//else myTag1List[myData[curIdx].Tag1] = myTag1List[myData[curIdx].Tag1] = 1;
-		}
-		if(myInfo->GetTag2Index() != -1)
-		{
-			CheckTokenIndex(tokens, myInfo->GetTag2Index(), k, "Tag2Index");
-			strcpy(myData[curIdx].Tag2, tokens[myInfo->GetTag2Index()].ascii());
+			CheckTokenIndex(tokens, tid, k, "TimestampTimeIndex");
+			CheckTokenIndex(tokens, did, k, "TimestampDateIndex");
 
-			if(!myTag2List.contains(myData[curIdx].Tag2)) myTag2List.insert(myData[curIdx].Tag2, 1);
-			//else myTag2List[myData[curIdx].Tag2] = myTag1List[myData[curIdx].Tag2] = 1;
-		}
-		if(myInfo->GetTag3Index() != -1)
-		{
-			CheckTokenIndex(tokens, myInfo->GetTag3Index(), k, "Tag3Index");
-			strcpy(myData[curIdx].Tag3, tokens[myInfo->GetTag3Index()].ascii());
+			QString dtString = tokens[did] + " " + tokens[tid];
+			QDateTime dtm = QDateTime::fromString(dtString, myInfo->GetTimestampStringFormat());
 
-			if(!myTag3List.contains(myData[curIdx].Tag3)) myTag3List.insert(myData[curIdx].Tag3, 1);
-			//else myTag3List[myData[curIdx].Tag3] = myTag3List[myData[curIdx].Tag3] = 1;
-		}
-		if(myInfo->GetTag4Index() != -1)
-		{
-			CheckTokenIndex(tokens, myInfo->GetTag4Index(), k, "Tag4Index");
-			strcpy(myData[curIdx].Tag4, tokens[myInfo->GetTag4Index()].ascii());
+			int m = dtm.date().month();
+			int d = dtm.date().day();
+			int y = dtm.date().year();
 
-			if(!myTag4List.contains(myData[curIdx].Tag4)) myTag4List.insert(myData[curIdx].Tag4, 1);
-			//else myTag3List[myData[curIdx].Tag3] = myTag3List[myData[curIdx].Tag3] = 1;
-		}
-
-		for(int i = 0; myInfo->GetField(i) != NULL; i++)
-		{
-			FieldInfo* fi = myInfo->GetField(i);
-			if(fi->GetType() == FieldInfo::Data)
+			if(!dtm.isValid())
 			{
-				// Parse and store the field value.
-				int fid = fi->GetFieldIndex();
-				CheckTokenIndex(tokens, fid, k, fi->GetName());
-				float value = tokens[fid].toFloat();
-				myData[curIdx].Field[i] = value;
+				Console::Warning(QString("Invalid date and time at line %1: %2").arg(k + 2).arg(dtString));
 			}
+			else
+			{
+				myData[curIdx].Timestamp = dtm.toTime_t();
+				if(myData[curIdx].Timestamp < myTimestampRange[0]) myTimestampRange[0] = myData[curIdx].Timestamp;
+				if(myData[curIdx].Timestamp > myTimestampRange[1]) myTimestampRange[1] = myData[curIdx].Timestamp;
+			}
+
+			// Read tags if present in specification
+			if(myInfo->GetTag1Index() != -1)
+			{
+				CheckTokenIndex(tokens, myInfo->GetTag1Index(), k, "Tag1Index");
+				strcpy(myData[curIdx].Tag1, tokens[myInfo->GetTag1Index()].ascii());
+
+				if(!myTag1List.contains(myData[curIdx].Tag1)) myTag1List.insert(myData[curIdx].Tag1, 1);
+				//else myTag1List[myData[curIdx].Tag1] = myTag1List[myData[curIdx].Tag1] = 1;
+			}
+			if(myInfo->GetTag2Index() != -1)
+			{
+				CheckTokenIndex(tokens, myInfo->GetTag2Index(), k, "Tag2Index");
+				strcpy(myData[curIdx].Tag2, tokens[myInfo->GetTag2Index()].ascii());
+
+				if(!myTag2List.contains(myData[curIdx].Tag2)) myTag2List.insert(myData[curIdx].Tag2, 1);
+				//else myTag2List[myData[curIdx].Tag2] = myTag1List[myData[curIdx].Tag2] = 1;
+			}
+			if(myInfo->GetTag3Index() != -1)
+			{
+				CheckTokenIndex(tokens, myInfo->GetTag3Index(), k, "Tag3Index");
+				strcpy(myData[curIdx].Tag3, tokens[myInfo->GetTag3Index()].ascii());
+
+				if(!myTag3List.contains(myData[curIdx].Tag3)) myTag3List.insert(myData[curIdx].Tag3, 1);
+				//else myTag3List[myData[curIdx].Tag3] = myTag3List[myData[curIdx].Tag3] = 1;
+			}
+			if(myInfo->GetTag4Index() != -1)
+			{
+				CheckTokenIndex(tokens, myInfo->GetTag4Index(), k, "Tag4Index");
+				strcpy(myData[curIdx].Tag4, tokens[myInfo->GetTag4Index()].ascii());
+
+				if(!myTag4List.contains(myData[curIdx].Tag4)) myTag4List.insert(myData[curIdx].Tag4, 1);
+				//else myTag3List[myData[curIdx].Tag3] = myTag3List[myData[curIdx].Tag3] = 1;
+			}
+
+			for(int i = 0; myInfo->GetField(i) != NULL; i++)
+			{
+				FieldInfo* fi = myInfo->GetField(i);
+				if(fi->GetType() == FieldInfo::Data)
+				{
+					// Parse and store the field value.
+					int fid = fi->GetFieldIndex();
+					CheckTokenIndex(tokens, fid, k, fi->GetName());
+					float value = tokens[fid].toFloat();
+					myData[curIdx].Field[i] = value;
+				}
+			}
+			curIdx++;
 		}
-		curIdx++;
 		line = dataFile.readLine();
 		k++;
-		if(k % 100 == 0) pw->SetItemProgress(k * 100 / myDataLength);
+		if(k % 100 == 0) pw->SetItemProgress(k * 100 / (myDataLength * dataFilter));
 	}
 
 	myDataLength = curIdx;
@@ -347,69 +381,69 @@ void DataSet::LoadFile(const QString& name)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-void DataSet::InitSondeBathyData()
-{
-	mySondeBathyVtkData = vtkUnstructuredGrid::New();
-
-	vtkPoints* pts = vtkPoints::New();
-	
-	int curPt = 0;
-	int curX = myData[0].X;
-	int curY = myData[0].Y;
-	for(int i = 0; i < myDataLength; i++)
-	{
-		if(myData[i].Y != curY || myData[i].X != curX)
-		{
-			curX =  myData[i].X;
-			curY =  myData[i].Y;
-			curPt++;
-		}
-	}
-	pts->SetNumberOfPoints(curPt);
-
-	mySondeBathyVtkData->SetPoints(pts);
-
-	vtkFloatArray* fields; 
-	fields = vtkFloatArray::New();
-	fields->Allocate(curPt);
-
-	fields->SetName("Z");
-	mySondeBathyVtkData->GetPointData()->AddArray(fields);
-
-	curX = myData[0].X;
-	curY = myData[0].Y;
-	float maxZ = 0;
-	curPt = 0;
-	for(int i = 0; i < myDataLength; i++)
-	{
-		if(myData[i].Y == curY && myData[i].X == curX)
-		{
-			if(maxZ < myData[i].Z)
-			{
-				maxZ = myData[i].Z;
-			}
-		}
-		else
-		{
-			// Insert a new point (x and y coordinates have to be switched...
-			// TODO: fix transforms to avoid this and keep things more consistent).
-			pts->SetPoint(curPt, curY, maxZ - mySondeBathyDepthCorrection, curX);
-			// Add field values.
-			fields->InsertValue(curPt, maxZ - mySondeBathyDepthCorrection);
-			//printf("Added point: %f\n", maxZ - mySondeBathyDepthCorrection);
-			maxZ = 0;
-			curX =  myData[i].X;
-			curY =  myData[i].Y;
-			curPt++;
-		}
-	}
-
-	fields->Delete();
-	pts->Delete();
-
-	//double* range = myVtkData->GetBounds();
-	//printf("Sonde Range: %f-%f %f-%f %f-%f\n", range[0], range[1], range[2], range[3], range[4], range[5]);
-}
+//void DataSet::InitSondeBathyData()
+//{
+//	mySondeBathyVtkData = vtkUnstructuredGrid::New();
+//
+//	vtkPoints* pts = vtkPoints::New();
+//	
+//	int curPt = 0;
+//	int curX = myData[0].X;
+//	int curY = myData[0].Y;
+//	for(int i = 0; i < myDataLength; i++)
+//	{
+//		if(myData[i].Y != curY || myData[i].X != curX)
+//		{
+//			curX =  myData[i].X;
+//			curY =  myData[i].Y;
+//			curPt++;
+//		}
+//	}
+//	pts->SetNumberOfPoints(curPt);
+//
+//	mySondeBathyVtkData->SetPoints(pts);
+//
+//	vtkFloatArray* fields; 
+//	fields = vtkFloatArray::New();
+//	fields->Allocate(curPt);
+//
+//	fields->SetName("Z");
+//	mySondeBathyVtkData->GetPointData()->AddArray(fields);
+//
+//	curX = myData[0].X;
+//	curY = myData[0].Y;
+//	float maxZ = 0;
+//	curPt = 0;
+//	for(int i = 0; i < myDataLength; i++)
+//	{
+//		if(myData[i].Y == curY && myData[i].X == curX)
+//		{
+//			if(maxZ < myData[i].Z)
+//			{
+//				maxZ = myData[i].Z;
+//			}
+//		}
+//		else
+//		{
+//			// Insert a new point (x and y coordinates have to be switched...
+//			// TODO: fix transforms to avoid this and keep things more consistent).
+//			pts->SetPoint(curPt, curY, maxZ - mySondeBathyDepthCorrection, curX);
+//			// Add field values.
+//			fields->InsertValue(curPt, maxZ - mySondeBathyDepthCorrection);
+//			//printf("Added point: %f\n", maxZ - mySondeBathyDepthCorrection);
+//			maxZ = 0;
+//			curX =  myData[i].X;
+//			curY =  myData[i].Y;
+//			curPt++;
+//		}
+//	}
+//
+//	fields->Delete();
+//	pts->Delete();
+//
+//	//double* range = myVtkData->GetBounds();
+//	//printf("Sonde Range: %f-%f %f-%f %f-%f\n", range[0], range[1], range[2], range[3], range[4], range[5]);
+//}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 float* DataSet::GetZRange()
@@ -645,10 +679,16 @@ void DataSet::SelectByTag(QString tag, DataSetInfo::TagId tagId, SubsetType subs
 					item->Flags |= DataItem::Selected;
 				}
 			}
+			item->FlagsChanged = true;
 		}
 		else if(mode == DataSet::SelectionNew)
 		{
 			item->Flags &= ~DataItem::Selected;
+			item->FlagsChanged = true;
+		}
+		else
+		{
+			item->FlagsChanged = false;
 		}
 
 		i++;
@@ -681,6 +721,7 @@ void DataSet::ClearSelection()
 	VtkDataManager::GetInstance()->Update(DataSet::SelectedData);
 
 	Preferences* pref = AppConfig::GetInstance()->GetPreferences();
+	myNumSortedGroups = 0;
 	UpdateGroups(pref->GetGroupingTagId(), pref->GetGroupingSubset());
 }
 
@@ -729,7 +770,6 @@ void DataSet::UpdateGroups(DataSetInfo::TagId tagId, SubsetType subset)
 		item = GetData(i, subset);
 		if(!item) break;
 
-		
 		// Get tag
 		QString tag = item->GetTag(tagId);
 
@@ -739,6 +779,17 @@ void DataSet::UpdateGroups(DataSetInfo::TagId tagId, SubsetType subset)
 		{
 			Console::Error("DataSet::UpdateGroups: Invalid group tag: " + tag);
 			ShutdownApp(true);
+		}
+
+		if(item->FlagsChanged)
+		{
+			// This is a newly selected item.
+			item->FlagsChanged = false;
+			if(myNumSortedGroups == 0 || mySortedGroups[myNumSortedGroups - 1] != grp)
+			{
+				mySortedGroups[myNumSortedGroups] = grp;
+				myNumSortedGroups++;
+			}
 		}
 
 		// Insert element.

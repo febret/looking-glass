@@ -148,35 +148,6 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
-         <widget class="QLabel" name="label_5">
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="text">
-           <string>X Labels:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="xLabelsBox"/>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Y Labels:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="yLabelsBox"/>
-        </item>
-        <item>
          <widget class="QLabel" name="label_4">
           <property name="text">
            <string>Label Font Size:</string>
@@ -187,18 +158,24 @@
          <widget class="QSpinBox" name="labelFontSizeBox"/>
         </item>
         <item>
-         <widget class="QCheckBox" name="plotAdjustLabelsChoice">
-          <property name="text">
-           <string>Adjust Label Values</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QCheckBox" name="plotLegendChoice">
           <property name="text">
            <string>Draw Legend</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
