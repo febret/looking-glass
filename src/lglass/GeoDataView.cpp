@@ -38,13 +38,23 @@
 
 #include <vtkPLYReader.h>
 #include <vtkElevationFilter.h>
+#include <vtkDelimitedTextReader.h>
+#include <vtkTableToPolyData.h>
+#include <vtkTable.h>
+#include <vtkGlyph3D.h>
+#include <vtkGlyph2D.h>
+#include <vtkGlyphSource2D.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 GeoDataItem::GeoDataItem():
 	myMeshUI(NULL),
 	myImageUI(NULL),
 	myPointsUI(NULL),
-	myPanel(NULL)
+	myPanel(NULL),
+	myActor(NULL),
+	myContourActor(NULL),
+	myElevationFilter(NULL),
+	myGlyphFilter(NULL)
 {
 }
 
@@ -56,7 +66,7 @@ void GeoDataItem::Initialize(GeoDataView* view, Setting& cfg)
 	QString type = cfg["Type"];
 	if(type == "Mesh") myType = Mesh;
 	else if(type == "Image") myType = Image;
-	else if(type == "PointSet") myType = PointSet;
+	else if(type == "PointCloud") myType = PointCloud;
 	else Console::Message(QString("GeoDataItem::Initialize - unknown item type: %1").arg(type));
 
 	myFilename = cfg["File"];
@@ -71,7 +81,6 @@ void GeoDataItem::Initialize(GeoDataView* view, Setting& cfg)
 		myPanel->setTitle(myLabel);
 		dock->layout()->addWidget(myPanel);
 
-
 		if(myType == Mesh)
 		{
 			InitMesh(file, cfg);
@@ -79,6 +88,10 @@ void GeoDataItem::Initialize(GeoDataView* view, Setting& cfg)
 		else if(myType == Image)
 		{
 			InitImage(file, cfg);
+		}
+		else if(myType == PointCloud)
+		{
+			InitPoints(file, cfg);
 		}
 	}
 }
@@ -105,38 +118,60 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 
 	// Needed to force update of scalar range used for contour generation.
 	reader->Update();
-
-	// Initialize bathy contour.
-	myElevationFilter = vtkElevationFilter::New();
-	myElevationFilter->SetInput(reader->GetOutput());
 	double* bounds = reader->GetOutput()->GetBounds();
-	myElevationFilter->SetLowPoint(0, bounds[3], 0);
-	myElevationFilter->SetHighPoint(0, bounds[2], 0);
-	myElevationFilter->SetScalarRange(bounds[3], bounds[2]);
-	myElevationFilter->Update();
+	Console::Message(QString("Mesh %1 bounds: %2 %3  |  %4 %5  |  %6 %7")
+		.arg(myLabel).arg(bounds[0]).arg(bounds[1]).arg(bounds[2]).arg(bounds[3]).arg(bounds[4]).arg(bounds[5]));
 
-	myContourFilter = vtkContourFilter::New();
-	myContourFilter->SetInput(myElevationFilter->GetOutput());
-	double rstart = myElevationFilter->GetScalarRange()[0];
-	double rend = myElevationFilter->GetScalarRange()[1];
-	//Console::Message(QString("Rstart %1 Rend %2").arg(rstart).arg(rend));
-	myContourFilter->GenerateValues(20, rstart, rend);
-	myContourMapper = vtkPolyDataMapper::New();
-	myContourMapper->SetInput(myContourFilter->GetOutput());
-	myContourMapper->SetScalarVisibility(0);
-	myContourMapper->Update();
+	if(cfg.exists("DrawMode"))
+	{
+		// Hack: for now always draw vertext glyphs when DrawMode is present.
+		myGlyphFilter = vtkGlyph3D::New();
+		myGlyphFilter->SetInput(reader->GetOutput());
+		myMapper->SetInput(myGlyphFilter->GetOutput());
 
-	myContourActor = vtkActor::New();
-	myContourActor->SetMapper(myContourMapper);
-	myContourActor->GetProperty()->SetLighting(0);
-	myContourActor->GetProperty()->SetLineWidth(1);
-	myContourActor->GetProperty()->SetOpacity(1);
-	myContourActor->VisibilityOff();
-	myContourActor->SetScale(1, VisualizationManager::DefaultDepthScale, 1);
+		vtkGlyphSource2D* gs = vtkGlyphSource2D::New();
+		gs->SetGlyphTypeToVertex();
+		myGlyphFilter->SetSource(gs->GetOutput());
+	}
+	else
+	{
+		// Initialize contour.
+		myElevationFilter = vtkElevationFilter::New();
+		myElevationFilter->SetInput(reader->GetOutput());
+		myElevationFilter->SetLowPoint(0, bounds[3], 0);
+		myElevationFilter->SetHighPoint(0, bounds[2], 0);
+		myElevationFilter->SetScalarRange(bounds[3], bounds[2]);
+		myElevationFilter->Update();
+
+		myContourFilter = vtkContourFilter::New();
+		myContourFilter->SetInput(myElevationFilter->GetOutput());
+		double rstart = myElevationFilter->GetScalarRange()[0];
+		double rend = myElevationFilter->GetScalarRange()[1];
+		//Console::Message(QString("Rstart %1 Rend %2").arg(rstart).arg(rend));
+		myContourFilter->GenerateValues(20, rstart, rend);
+		myContourMapper = vtkPolyDataMapper::New();
+		myContourMapper->SetInput(myContourFilter->GetOutput());
+		myContourMapper->SetScalarVisibility(0);
+		myContourMapper->Update();
+
+		myContourActor = vtkActor::New();
+		myContourActor->SetMapper(myContourMapper);
+		myContourActor->GetProperty()->SetLighting(0);
+		myContourActor->GetProperty()->SetLineWidth(1);
+		myContourActor->GetProperty()->SetOpacity(1);
+		myContourActor->VisibilityOff();
+		myContourActor->SetPosition(0, 0.5f, 0);
+		myContourActor->SetScale(1, VisualizationManager::DefaultDepthScale, 1);
+	}
+
+	InitActorTransform(cfg);
 
 	vtkRenderer* renderer = myView->GetVisualizationManager()->GetMainRenderer();
 	renderer->AddActor(myActor);
-	renderer->AddActor(myContourActor);
+	if(myContourActor != NULL)
+	{
+		renderer->AddActor(myContourActor);
+	}
 
 	reader->Delete();
 
@@ -153,14 +188,26 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 	myMainColorButton->setText("Color");
 	myMainColorButton->setChosenColor(QColor(255, 255, 255));
 
-	myContourColorButton = new pqColorChooserButton(myPanel);
-	myPanel->layout()->addWidget(myContourColorButton);
-	myContourColorButton->setText("Contour Color");
-	myContourColorButton->setChosenColor(QColor(0, 0, 0));
+	if(myContourActor != NULL)
+	{
+		myContourColorButton = new pqColorChooserButton(myPanel);
+		myPanel->layout()->addWidget(myContourColorButton);
+		myContourColorButton->setText("Contour Color");
+		myContourColorButton->setChosenColor(QColor(0, 0, 0));
+		connect(myContourColorButton, SIGNAL(chosenColorChanged(const QColor&)), SLOT(OnContourColorChanged(const QColor&)));
+	}
+	else
+	{
+		myMeshUI->contourCheck->setVisible(false);
+		myMeshUI->contourStartBox->setVisible(false);
+		myMeshUI->contourIntervalBox->setVisible(false);
+		myMeshUI->label->setVisible(false);
+		myMeshUI->label_2->setVisible(false);
+		myMeshUI->refreshButton->setVisible(false);
+	}
 
 	connect(myMeshUI->visibleCheck, SIGNAL(toggled(bool)), SLOT(OnVisibleToggle(bool)));
 	connect(myMainColorButton, SIGNAL(chosenColorChanged(const QColor&)), SLOT(OnMainColorChanged(const QColor&)));
-	connect(myContourColorButton, SIGNAL(chosenColorChanged(const QColor&)), SLOT(OnContourColorChanged(const QColor&)));
 	connect(myMeshUI->opacityBox, SIGNAL(valueChanged(double)), SLOT(OnOpacityChanged(double)));
 
 	connect(myMeshUI->refreshButton, SIGNAL(clicked()), SLOT(OnRefreshClicked()));
@@ -169,6 +216,61 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 	connect(myMeshUI->contourIntervalBox, SIGNAL(valueChanged(double)), SLOT(OnContourParamsChanged()));
 
 	myMeshUI->refreshButton->setEnabled(false);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::InitPoints(QFile* file, Setting& cfg)
+{
+	vtkDelimitedTextReader* reader = vtkDelimitedTextReader::New();
+	reader->SetFileName(file->fileName().ascii());
+	reader->SetFieldDelimiterCharacters(",");
+	reader->SetDetectNumericColumns(1);
+	reader->SetHaveHeaders(0);
+	reader->Update();
+
+	vtkTable* tb = reader->GetOutput();
+	int nr = tb->GetNumberOfRows();
+
+	vtkTableToPolyData* table2poly = vtkTableToPolyData::New();
+	table2poly->SetInputConnection(0, reader->GetOutputPort(0));
+	table2poly->SetXColumn(cfg["XColumn"]);
+	table2poly->SetYColumn(cfg["YColumn"]);
+	table2poly->SetZColumn(cfg["ZColumn"]);
+	table2poly->Update();
+
+	double* bounds = table2poly->GetOutput()->GetBounds();
+	Console::Message(QString("Point cloud %1 size %2, bounds: %3 %4  |  %5 %6  |  %7 %8")
+		.arg(myLabel).arg(nr).arg(bounds[0]).arg(bounds[1]).arg(bounds[2]).arg(bounds[3]).arg(bounds[4]).arg(bounds[5]));
+
+	myMapper = vtkDataSetMapper::New();
+	myMapper->SetInput(table2poly->GetOutput());
+	//myMapper->SetLookupTable(lakeLut);
+	myMapper->Update();
+
+	myActor = vtkActor::New();
+	myActor->SetMapper(myMapper);
+	myActor->GetProperty()->BackfaceCullingOff();
+	myActor->GetProperty()->FrontfaceCullingOff();
+	myActor->GetProperty()->SetAmbientColor(1, 1, 1);
+	myActor->GetProperty()->SetAmbient(0.2);
+	myActor->SetScale(1, VisualizationManager::DefaultDepthScale, 1);
+	myActor->GetProperty()->SetLighting(0);
+	myActor->PickableOff();
+
+	InitActorTransform(cfg);
+
+	vtkRenderer* renderer = myView->GetVisualizationManager()->GetMainRenderer();
+	renderer->AddActor(myActor);
+
+	reader->Delete();
+	table2poly->Delete();
+
+	// Setup the UI
+	myPointsUI = new Ui_GeoDataPointsPanel();
+	myPointsUI->setupUi(myPanel);
+
+	connect(myPointsUI->visibleCheck, SIGNAL(toggled(bool)), SLOT(OnVisibleToggle(bool)));
+	connect(myPointsUI->opacityBox, SIGNAL(valueChanged(double)), SLOT(OnOpacityChanged(double)));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,12 +304,10 @@ void GeoDataItem::InitImage(QFile* file, Setting& cfg)
 	myActor->GetProperty()->BackfaceCullingOff();
 	myActor->GetProperty()->FrontfaceCullingOff();
 	myActor->SetTexture(texture);
-	myActor->SetOrientation(sOrientation[0], sOrientation[1], sOrientation[2]);
-	myActor->SetScale(sScale[0], sScale[1], sScale[2]);
-	myActor->SetPosition(sPosition[0], sPosition[1], sPosition[2]);
-	myActor->GetProperty()->SetOpacity(1);
 	myActor->PickableOff();
 	myActor->GetProperty()->SetLighting(0);
+
+	InitActorTransform(cfg);
 
 	vtkRenderer* renderer = myView->GetVisualizationManager()->GetMainRenderer();
 	renderer->AddActor(myActor);
@@ -217,14 +317,67 @@ void GeoDataItem::InitImage(QFile* file, Setting& cfg)
 	// Setup the UI
 	myImageUI = new Ui_GeoDataImagePanel();
 	myImageUI->setupUi(myPanel);
+
+	connect(myImageUI->visibleCheck, SIGNAL(toggled(bool)), SLOT(OnVisibleToggle(bool)));
+	connect(myImageUI->opacityBox, SIGNAL(valueChanged(double)), SLOT(OnOpacityChanged(double)));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::InitActorTransform(Setting& cfg)
+{
+	if(cfg.exists("Scale"))
+	{
+		Setting& s = cfg["Scale"];
+		myScale[0] = s[0];
+		myScale[1] = s[1];
+		myScale[2] = s[2];
+	}
+	else
+	{
+		myScale[0] = myScale[1] = myScale[2] = 1;
+	}
+	if(cfg.exists("Position"))
+	{
+		Setting& s = cfg["Position"];
+		myPosition[0] = s[0];
+		myPosition[1] = s[1];
+		myPosition[2] = s[2];
+	}
+	else
+	{
+		myPosition[0] = myPosition[1] = myPosition[2] = 0;
+	}
+	if(cfg.exists("Orientation"))
+	{
+		Setting& s = cfg["Orientation"];
+		myOrientation[0] = s[0];
+		myOrientation[1] = s[1];
+		myOrientation[2] = s[2];
+	}
+	else
+	{
+		myOrientation[0] = myOrientation[1] = myOrientation[2] = 0;
+	}
+
+	myActor->SetOrientation(myOrientation[0], myOrientation[1], myOrientation[2]);
+	myActor->SetScale(myScale[0], myScale[1], myScale[2]);
+	myActor->SetPosition(myPosition[0], myPosition[1], myPosition[2]);
+
+	if(myContourActor != NULL)
+	{
+		myContourActor->SetOrientation(myOrientation[0], myOrientation[1], myOrientation[2]);
+		myContourActor->SetScale(myScale[0], myScale[1], myScale[2]);
+		myContourActor->SetPosition(myPosition[0], myPosition[1], myPosition[2]);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void GeoDataItem::SetDepthScale(int value)
 {
-	if(myType != Image)
+	myActor->SetScale(myScale[0], myScale[1] * value, myScale[2]);
+	if(myContourActor != NULL)
 	{
-		myActor->SetScale(1, value, 1);
+		myContourActor->SetScale(myScale[0], myScale[1] * value, myScale[2]);
 	}
 }
 

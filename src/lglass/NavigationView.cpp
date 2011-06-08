@@ -164,7 +164,7 @@ void NavigationView::LoadMissionSet(QString setName)
 	QString section = QString("Application/NavigationView/%1").arg(setName);
 	if(!c->exists(section))
 	{
-		Console::Error("Missing config section %1: wrong configuration file?");
+		Console::Error(QString("Missing config section %1: wrong configuration file?").arg(setName));
 		ShutdownApp(true);
 	}
 
