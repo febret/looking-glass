@@ -46,13 +46,14 @@ class VisualizationManager;
 class GeoDataView;
 class vtkActor;
 class vtkElevationFilter;
+class vtkGlyph3D;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class GeoDataItem: public QObject
 {
     Q_OBJECT
 public:
-	enum Type { Mesh, PointSet, Image };
+	enum Type { Mesh, PointCloud, Image };
 
 public:
 	GeoDataItem();
@@ -83,7 +84,9 @@ protected slots:
 
 private:
 	void InitMesh(QFile* file, Setting& cfg);
+	void InitPoints(QFile* file, Setting& cfg);
 	void InitImage(QFile* file, Setting& cfg);
+	void InitActorTransform(Setting& cfg);
 
 private:
 	Type myType;
@@ -96,6 +99,7 @@ private:
 	vtkDataSetMapper* myMapper;
 	vtkActor* myActor;
 	vtkElevationFilter* myElevationFilter;
+	vtkGlyph3D* myGlyphFilter;
 	vtkContourFilter* myContourFilter;
     vtkPolyDataMapper* myContourMapper;
     vtkActor* myContourActor;
@@ -103,6 +107,11 @@ private:
 	QString myName;
 	QString myLabel;
 	QString myFilename;
+
+	// Transform
+	float myScale[3];
+	float myOrientation[3];
+	float myPosition[3];
 
 	// Colors
 	QColor myMainColor;
