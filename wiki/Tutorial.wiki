@@ -2,13 +2,17 @@
 
 =Introduction Video=
 Test video here
+
 <wiki:video url="http://www.youtube.com/watch?v=3LkNlTNHZzE"/>
+
 `test code here`
 ---------------------------------------------------------------------------------------------------
 
 
 =Tutorial 1=
 Test video here
+
 <wiki:video url="http://www.youtube.com/watch?v=U28hbBldHVQ"/>
+
 `test code here`
 ---------------------------------------------------------------------------------------------------
