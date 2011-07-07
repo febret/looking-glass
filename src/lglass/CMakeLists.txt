@@ -79,15 +79,18 @@ SET( Srcs
         DataSetInfo.cpp
         DockedTool.cpp
         GeoDataView.cpp
+        LineTool.cpp
         Main.cpp
         NavigationView.cpp
         Plot.cpp
         PlotView.cpp
+        PointSourceWindow.cpp
         Preferences.cpp
         PreferencesWindow.cpp
         ProgressWindow.cpp
         RepositoryManager.cpp
         SliceViewer.cpp
+        SectionView.cpp
         DataViewOptions.cpp
         TableView.cpp
         Utils.cpp
@@ -108,15 +111,18 @@ SET( Headers
         DataSetInfo.h
         DockedTool.h
         GeoDataView.h
+        LineTool.h
         LookingGlassSystem.h
         NavigationView.h
         Plot.h
         PlotView.h
+        PointSourceWindow.h
         Preferences.h
         PreferencesWindow.h
         ProgressWindow.h
         RepositoryManager.h
         SliceViewer.h
+        SectionView.h
         DataViewOptions.h
         ToolsetSetupWindow.h
         TableView.h
@@ -136,12 +142,15 @@ SET( UIS
 		ui/GeoDataMeshPanel.ui
 		ui/GeoDataImagePanel.ui
 		ui/GeoDataPointsPanel.ui
+        ui/LineToolDock.ui
         ui/MainWindow.ui
         ui/NavigationViewDock.ui
+		ui/PointSourceDialog.ui
 		ui/PlotViewDock.ui
         ui/ProgressWindow.ui
 		ui/PreferencesWindow.ui
 		ui/SetupToolset.ui
+		ui/SectionViewDock.ui
 		ui/SliceViewerWindow.ui
 		ui/DataViewOptionsDock.ui
 		ui/TableView.ui)
@@ -199,6 +208,7 @@ TARGET_LINK_LIBRARIES( lglass
     QVTK
     vtkRendering
     vtkGraphics
+    vtkGenericFiltering
     vtkIO
     vtkCommon
     vtkHybrid

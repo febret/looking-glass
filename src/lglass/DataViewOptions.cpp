@@ -24,15 +24,12 @@ void DataViewOptions::SetupUI()
 	myUI = new Ui_DataViewOptionsDock();
 	myUI->setupUi(GetDockWidget());
 
-	myUI->isoGroupBox->hide();
-
 	DataSet* data = myVizMng->GetDataSet();
 
     // Setup the components box.
 	for(int i = 0; i < data->GetInfo()->GetNumFields(); i++)
     {
         myUI->componentBox->addItem(data->GetFieldName(i), i);
-		myUI->isoComponentBox->addItem(data->GetFieldName(i), i);
     }
 
 	// Setup UI
@@ -50,10 +47,15 @@ void DataViewOptions::SetupUI()
 
 	OnSelectedDateChanged(0);
 
+	DataSetInfo* dataInfo = data->GetInfo();
+
+	myUI->selTypeBox->addItem(QString(dataInfo->GetTag1Label().c_str()));
+	myUI->selTypeBox->addItem(QString(dataInfo->GetTag2Label().c_str()));
+	myUI->selTypeBox->addItem(QString(dataInfo->GetTag3Label().c_str()));
+	myUI->selTypeBox->addItem(QString(dataInfo->GetTag4Label().c_str()));
+	
+
 	// Wire events.
-	//connect(myUI->isoValueSlider, SIGNAL(valueChanged(int)), SLOT(OnIsoValueSliderChanged(int)));
-	//connect(myUI->showIsoButton, SIGNAL(toggled(bool)), SLOT(OnShowIsoButtonToggle(bool)));
-	//connect(myUI->isoComponentBox, SIGNAL(currentIndexChanged(int)), SLOT(OnSelectedIsoFieldChanged(int)));
 	connect(myUI->componentBox, SIGNAL(currentIndexChanged(int)), SLOT(OnSelectedFieldChanged(int)));
 	connect(myUI->startDateBox, SIGNAL(currentIndexChanged(int)), SLOT(OnSelectedDateChanged(int)));
 	connect(myUI->showSingleMissionButton, SIGNAL(toggled(bool)), SLOT(OnShowMissionButtonToggle(bool)));
@@ -61,6 +63,7 @@ void DataViewOptions::SetupUI()
 	connect(myUI->startMissionSlider, SIGNAL(valueChanged(int)), SLOT(OnStartMissionSliderChange(int)));
 	connect(myUI->endMissionSlider, SIGNAL(valueChanged(int)), 	SLOT(OnEndMissionSliderChange(int)));
 	connect(myUI->showSondeDataButton, SIGNAL(toggled(bool)), SLOT(OnShowSondeDataButton(bool)));
+	connect(myUI->selApplyButton, SIGNAL(clicked()), SLOT(OnSelectionApplyClicked()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,6 +76,29 @@ void DataViewOptions::Initialize()
 	//OnSelectedIsoFieldChanged(0);
 
 	QString zFieldName = myVizMng->GetDataSet()->GetInfo()->GetZFieldName();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void DataViewOptions::OnSelectionApplyClicked()
+{
+	DataSet* data = myVizMng->GetDataSet();
+	QString query = myUI->selExpressionBox->text();
+	bool selStart = true;
+	if(query != "")
+	{
+		QStringList qlist = query.split(",");
+		for(int i = 0; i < qlist.size(); i++)
+		{
+			QString item = qlist.at(i);
+			item = item.trimmed();
+			data->SelectByTag(
+				item, (DataSetInfo::TagId)myUI->selTypeBox->currentIndex(), 
+				DataSet::FilteredData, 
+				selStart ? DataSet::SelectionNew : DataSet::SelectionToggle);
+			selStart = false;
+		}
+		myVizMng->Update();
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

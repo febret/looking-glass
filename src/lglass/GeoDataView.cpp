@@ -34,6 +34,7 @@
 #include "VisualizationManager.h"
 #include "RepositoryManager.h"
 #include "ui_MainWindow.h"
+#include "PointSourceWindow.h"
 #include "pq/pqColorChooserButton.h"
 
 #include <vtkPLYReader.h>
@@ -44,6 +45,7 @@
 #include <vtkGlyph3D.h>
 #include <vtkGlyph2D.h>
 #include <vtkGlyphSource2D.h>
+#include <vtkBoxClipDataSet.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 GeoDataItem::GeoDataItem():
@@ -54,7 +56,8 @@ GeoDataItem::GeoDataItem():
 	myActor(NULL),
 	myContourActor(NULL),
 	myElevationFilter(NULL),
-	myGlyphFilter(NULL)
+	myGlyphFilter(NULL),
+	myClipFilter(NULL)
 {
 }
 
@@ -101,8 +104,19 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 {
 	vtkPLYReader* reader = vtkPLYReader::New();
 	reader->SetFileName(file->fileName().ascii());
+
+	// Needed to force update of scalar range used for contour generation.
+	reader->Update();
+	double* bounds = reader->GetOutput()->GetBounds();
+	Console::Message(QString("Mesh %1 bounds: %2 %3  |  %4 %5  |  %6 %7")
+		.arg(myLabel).arg(bounds[0]).arg(bounds[1]).arg(bounds[2]).arg(bounds[3]).arg(bounds[4]).arg(bounds[5]));
+
+	myClipFilter = vtkBoxClipDataSet::New();
+	myClipFilter->SetInput(reader->GetOutput());
+	myClipFilter->SetBoxClip(bounds[0], bounds[1], bounds[2], bounds[3], bounds[4], bounds[5]);
+
 	myMapper = vtkDataSetMapper::New();
-	myMapper->SetInput(reader->GetOutput());
+	myMapper->SetInput(myClipFilter->GetOutput());
 	//myMapper->SetLookupTable(lakeLut);
 	myMapper->Update();
 
@@ -116,18 +130,14 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 	myActor->SetScale(1, VisualizationManager::DefaultDepthScale, 1);
 	myActor->PickableOff();
 
-	// Needed to force update of scalar range used for contour generation.
-	reader->Update();
-	double* bounds = reader->GetOutput()->GetBounds();
-	Console::Message(QString("Mesh %1 bounds: %2 %3  |  %4 %5  |  %6 %7")
-		.arg(myLabel).arg(bounds[0]).arg(bounds[1]).arg(bounds[2]).arg(bounds[3]).arg(bounds[4]).arg(bounds[5]));
-
 	if(cfg.exists("DrawMode"))
 	{
 		// Hack: for now always draw vertext glyphs when DrawMode is present.
 		myGlyphFilter = vtkGlyph3D::New();
 		myGlyphFilter->SetInput(reader->GetOutput());
-		myMapper->SetInput(myGlyphFilter->GetOutput());
+
+		myClipFilter->SetInput(myGlyphFilter->GetOutput());
+		myMapper->SetInput(myClipFilter->GetOutput());
 
 		vtkGlyphSource2D* gs = vtkGlyphSource2D::New();
 		gs->SetGlyphTypeToVertex();
@@ -137,7 +147,7 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 	{
 		// Initialize contour.
 		myElevationFilter = vtkElevationFilter::New();
-		myElevationFilter->SetInput(reader->GetOutput());
+		myElevationFilter->SetInput(myClipFilter->GetOutput());
 		myElevationFilter->SetLowPoint(0, bounds[3], 0);
 		myElevationFilter->SetHighPoint(0, bounds[2], 0);
 		myElevationFilter->SetScalarRange(bounds[3], bounds[2]);
@@ -206,6 +216,31 @@ void GeoDataItem::InitMesh(QFile* file, Setting& cfg)
 		myMeshUI->refreshButton->setVisible(false);
 	}
 
+	myMeshUI->startXBox->setMinimum(bounds[0]);
+	myMeshUI->startXBox->setMaximum(bounds[1]);
+	myMeshUI->endXBox->setMinimum(bounds[0]);
+	myMeshUI->endXBox->setMaximum(bounds[1]);
+	myMeshUI->startXBox->setValue(bounds[0]);
+	myMeshUI->endXBox->setValue(bounds[1]);
+
+	myMeshUI->startYBox->setMinimum(bounds[2]);
+	myMeshUI->startYBox->setMaximum(bounds[3]);
+	myMeshUI->endYBox->setMinimum(bounds[2]);
+	myMeshUI->endYBox->setMaximum(bounds[3]);
+	myMeshUI->startYBox->setValue(bounds[2]);
+	myMeshUI->endYBox->setValue(bounds[3]);
+
+	myMeshUI->startZBox->setMinimum(bounds[4]);
+	myMeshUI->startZBox->setMaximum(bounds[5]);
+	myMeshUI->endZBox->setMinimum(bounds[4]);
+	myMeshUI->endZBox->setMaximum(bounds[5]);
+	myMeshUI->startZBox->setValue(bounds[4]);
+	myMeshUI->endZBox->setValue(bounds[5]);
+
+	connect(myMeshUI->startPointButton, SIGNAL(clicked()), SLOT(OnStartPointClicked()));
+	connect(myMeshUI->endPointButton, SIGNAL(clicked()), SLOT(OnEndPointClicked()));
+	connect(myMeshUI->selApplyButton, SIGNAL(clicked()), SLOT(OnSelApplyClicked()));
+	connect(myMeshUI->selResetButton, SIGNAL(clicked()), SLOT(OnSelResetClicked()));
 	connect(myMeshUI->visibleCheck, SIGNAL(toggled(bool)), SLOT(OnVisibleToggle(bool)));
 	connect(myMainColorButton, SIGNAL(chosenColorChanged(const QColor&)), SLOT(OnMainColorChanged(const QColor&)));
 	connect(myMeshUI->opacityBox, SIGNAL(valueChanged(double)), SLOT(OnOpacityChanged(double)));
@@ -242,8 +277,13 @@ void GeoDataItem::InitPoints(QFile* file, Setting& cfg)
 	Console::Message(QString("Point cloud %1 size %2, bounds: %3 %4  |  %5 %6  |  %7 %8")
 		.arg(myLabel).arg(nr).arg(bounds[0]).arg(bounds[1]).arg(bounds[2]).arg(bounds[3]).arg(bounds[4]).arg(bounds[5]));
 
+	myClipFilter = vtkBoxClipDataSet::New();
+	myClipFilter->SetInput(table2poly->GetOutput());
+	myClipFilter->SetBoxClip(bounds[0], bounds[1], bounds[2], bounds[3], bounds[4], bounds[5]);
+	myClipFilter->Update();
+
 	myMapper = vtkDataSetMapper::New();
-	myMapper->SetInput(table2poly->GetOutput());
+	myMapper->SetInput(myClipFilter->GetOutput());
 	//myMapper->SetLookupTable(lakeLut);
 	myMapper->Update();
 
@@ -269,6 +309,31 @@ void GeoDataItem::InitPoints(QFile* file, Setting& cfg)
 	myPointsUI = new Ui_GeoDataPointsPanel();
 	myPointsUI->setupUi(myPanel);
 
+	myPointsUI->startXBox->setMinimum(bounds[0]);
+	myPointsUI->startXBox->setMaximum(bounds[1]);
+	myPointsUI->endXBox->setMinimum(bounds[0]);
+	myPointsUI->endXBox->setMaximum(bounds[1]);
+	myPointsUI->startXBox->setValue(bounds[0]);
+	myPointsUI->endXBox->setValue(bounds[1]);
+
+	myPointsUI->startYBox->setMinimum(bounds[2]);
+	myPointsUI->startYBox->setMaximum(bounds[3]);
+	myPointsUI->endYBox->setMinimum(bounds[2]);
+	myPointsUI->endYBox->setMaximum(bounds[3]);
+	myPointsUI->startYBox->setValue(bounds[2]);
+	myPointsUI->endYBox->setValue(bounds[3]);
+
+	myPointsUI->startZBox->setMinimum(bounds[4]);
+	myPointsUI->startZBox->setMaximum(bounds[5]);
+	myPointsUI->endZBox->setMinimum(bounds[4]);
+	myPointsUI->endZBox->setMaximum(bounds[5]);
+	myPointsUI->startZBox->setValue(bounds[4]);
+	myPointsUI->endZBox->setValue(bounds[5]);
+
+	connect(myPointsUI->startPointButton, SIGNAL(clicked()), SLOT(OnStartPointClicked()));
+	connect(myPointsUI->endPointButton, SIGNAL(clicked()), SLOT(OnEndPointClicked()));
+	connect(myPointsUI->selApplyButton, SIGNAL(clicked()), SLOT(OnSelApplyClicked()));
+	connect(myPointsUI->selResetButton, SIGNAL(clicked()), SLOT(OnSelResetClicked()));
 	connect(myPointsUI->visibleCheck, SIGNAL(toggled(bool)), SLOT(OnVisibleToggle(bool)));
 	connect(myPointsUI->opacityBox, SIGNAL(valueChanged(double)), SLOT(OnOpacityChanged(double)));
 }
@@ -441,6 +506,153 @@ void GeoDataItem::OnRefreshClicked()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::OnSelApplyClicked()
+{
+	double bounds[6];
+	if(myPointsUI != NULL)
+	{
+		bounds[0] = myPointsUI->startXBox->value();
+		bounds[1] = myPointsUI->endXBox->value();
+		bounds[2] = myPointsUI->startYBox->value();
+		bounds[3] = myPointsUI->endYBox->value();
+		bounds[4] = myPointsUI->startZBox->value();
+		bounds[5] = myPointsUI->endZBox->value();
+	}
+	else if(myMeshUI != NULL)
+	{
+		bounds[0] = myMeshUI->startXBox->value();
+		bounds[1] = myMeshUI->endXBox->value();
+		bounds[2] = myMeshUI->startYBox->value();
+		bounds[3] = myMeshUI->endYBox->value();
+		bounds[4] = myMeshUI->startZBox->value();
+		bounds[5] = myMeshUI->endZBox->value();
+	}
+	if(myClipFilter != NULL)
+	{
+		myClipFilter->SetBoxClip(bounds[0], bounds[1], bounds[2], bounds[3], bounds[4], bounds[5]);
+		myView->GetVisualizationManager()->Render();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::OnSelResetClicked()
+{
+	if(myPointsUI != NULL)
+	{
+		double bounds[6];
+		bounds[0] = myPointsUI->startXBox->minimum();
+		bounds[1] = myPointsUI->startXBox->maximum();
+		bounds[2] = myPointsUI->startYBox->minimum();
+		bounds[3] = myPointsUI->startYBox->maximum();
+		bounds[4] = myPointsUI->startZBox->minimum();
+		bounds[5] = myPointsUI->startZBox->maximum();
+
+		myPointsUI->startXBox->setValue(bounds[0]);
+		myPointsUI->endXBox->setValue(bounds[1]);
+		myPointsUI->startYBox->setValue(bounds[2]);
+		myPointsUI->endYBox->setValue(bounds[3]);
+		myPointsUI->startZBox->setValue(bounds[4]);
+		myPointsUI->endZBox->setValue(bounds[5]);
+	}
+	else
+	{
+		double bounds[6];
+		bounds[0] = myMeshUI->startXBox->minimum();
+		bounds[1] = myMeshUI->startXBox->maximum();
+		bounds[2] = myMeshUI->startYBox->minimum();
+		bounds[3] = myMeshUI->startYBox->maximum();
+		bounds[4] = myMeshUI->startZBox->minimum();
+		bounds[5] = myMeshUI->startZBox->maximum();
+
+		myMeshUI->startXBox->setValue(bounds[0]);
+		myMeshUI->endXBox->setValue(bounds[1]);
+		myMeshUI->startYBox->setValue(bounds[2]);
+		myMeshUI->endYBox->setValue(bounds[3]);
+		myMeshUI->startZBox->setValue(bounds[4]);
+		myMeshUI->endZBox->setValue(bounds[5]);
+	}
+	OnSelApplyClicked();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::OnStartPointClicked()
+{
+	PointSourceWindow::GetInstance()->exec();
+	double point[3];
+	if(PointSourceWindow::GetInstance()->GetPoint(point))
+	{
+		if(myMeshUI != NULL)
+		{
+			myMeshUI->startXBox->setValue(point[0]);
+			myMeshUI->startYBox->setValue(point[1]);
+			myMeshUI->startZBox->setValue(point[2]);
+		}
+		else if(myPointsUI != NULL)
+		{
+			myPointsUI->startXBox->setValue(point[0]);
+			myPointsUI->startYBox->setValue(point[1]);
+			myPointsUI->startZBox->setValue(point[2]);
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::OnEndPointClicked()
+{
+	PointSourceWindow::GetInstance()->exec();
+	double point[3];
+	if(PointSourceWindow::GetInstance()->GetPoint(point))
+	{
+		if(myMeshUI != NULL)
+		{
+			myMeshUI->endXBox->setValue(point[0]);
+			myMeshUI->endYBox->setValue(point[1]);
+			myMeshUI->endZBox->setValue(point[2]);
+		}
+		else if(myPointsUI != NULL)
+		{
+			myPointsUI->endXBox->setValue(point[0]);
+			myPointsUI->endYBox->setValue(point[1]);
+			myPointsUI->endZBox->setValue(point[2]);
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::GetClipStartPoint(double* point)
+{
+	if(myMeshUI != NULL)
+	{
+		point[0] = myMeshUI->startXBox->value();
+		point[1] = myMeshUI->startYBox->value();
+		point[2] = myMeshUI->startZBox->value();
+	}
+	else if(myPointsUI != NULL)
+	{
+		point[0] = myPointsUI->startXBox->value();
+		point[1] = myPointsUI->startYBox->value();
+		point[2] = myPointsUI->startZBox->value();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void GeoDataItem::GetClipEndPoint(double* point)
+{
+	if(myMeshUI != NULL)
+	{
+		point[0] = myMeshUI->endXBox->value();
+		point[1] = myMeshUI->endYBox->value();
+		point[2] = myMeshUI->endZBox->value();
+	}
+	else if(myPointsUI != NULL)
+	{
+		point[0] = myPointsUI->endXBox->value();
+		point[1] = myPointsUI->endYBox->value();
+		point[2] = myPointsUI->endZBox->value();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 GeoDataView::GeoDataView(VisualizationManager* mng): 
 	DockedTool(mng, "Geographic Data"),
 	myNumItems(0),
@@ -473,143 +685,9 @@ void GeoDataView::Initialize()
 		myNumItems++;
 	}
 
- //   SetInitMessage("Initializing Bathymetry Model...");
-
-	//QString oldBathymetryFile = AppConfig::GetInstance()->GetProfileName() + "/bonney-09.vtk";
-	//QString sonarBathymetryFile = AppConfig::GetInstance()->GetProfileName() + "/bonney-09.vtk";
-	////QString sondeBathymetryFile = AppConfig::GetInstance()->GetProfileName() + "/sonde_bathymetry.vtk";
-	//
-	//QString sondeBathymetryFile = AppConfig::GetInstance()->GetProfileName() + "/bonney-09.vtk";
-
-	////QString sondeBathymetryFile = AppConfig::GetInstance()->GetProfileName() + "/bathymetry.vtk";
-
-	//VisualizationManager* mng = myVizMng;
-	//vtkRenderer* renderer = mng->GetMainRenderer();
-
- //   myReader = vtkPolyDataReader::New();
- //   myReader->SetFileName(oldBathymetryFile);
- //   myReader->Update();
-
-	//double* depthRange;
-	//depthRange = myReader->GetOutput()->GetScalarRange();
-	//vtkColorTransferFunction* lakeLut = vtkColorTransferFunction::New();
-
- //   myOldBathyMapper = vtkPolyDataMapper::New();
-	//myOldBathyMapper->SetInput(myReader->GetOutput());
- //   myOldBathyMapper->SetLookupTable(lakeLut);
- //   myOldBathyMapper->SetScalarRange(depthRange);
-	//myReader->GetOutput()->GetPointData()->SetActiveScalars("Scalar");
-
-	//SetOldBathyColor(myOldBathyColor);
- //   myOldBathyMapper->Update();
-
- //   myLakeActor = vtkActor::New();
- //   myLakeActor->SetMapper(myOldBathyMapper);
- //   myLakeActor->GetProperty()->BackfaceCullingOff();
- //   myLakeActor->GetProperty()->FrontfaceCullingOff();
- //   myLakeActor->GetProperty()->SetAmbientColor(1, 1, 1);
- //   myLakeActor->GetProperty()->SetAmbient(0.2);
-	//myLakeActor->SetPosition(0, 0, 0);
-	//myLakeActor->SetScale(1, 7, 1);
-	//myLakeActor->PickableOff();
-
-	//// SONDE_BASED BATHYMETRY
- //   mySondeBathyReader = vtkPolyDataReader::New();
- //   mySondeBathyReader->SetFileName(sondeBathymetryFile);
- //   mySondeBathyReader->Update();
-	//mySondeBathyReader->GetOutput()->GetPointData()->SetActiveScalars("Z");
-
-	//double* range = mySondeBathyReader->GetOutput()->GetBounds();
-	//Console::Message(QString("Sonde Bathy Range: %1-%2 %3-%4 %5-%6").arg(range[0]).arg(range[1]).arg(range[2]).arg(range[3]).arg(range[4]).arg(range[5]));
-
-	//range = myReader->GetOutput()->GetBounds();
-	//Console::Message(QString("Old Bathy Range: %1-%2 %3-%4 %5-%6").arg(range[0]).arg(range[1]).arg(range[2]).arg(range[3]).arg(range[4]).arg(range[5]));
-
-	//float* fr = myVizMng->GetDataSet()->GetZRange(); 
-	//depthRange[0] = fr[0];
-	//depthRange[1] = fr[1];
-	//lakeLut = vtkColorTransferFunction::New();
-
- //   mySondeBathyMapper = vtkPolyDataMapper::New();
-	//mySondeBathyMapper->SetInput(mySondeBathyReader->GetOutput());
- //   mySondeBathyMapper->SetLookupTable(lakeLut);
- //   mySondeBathyMapper->SetScalarRange(depthRange);
-	//mySondeBathyMapper->SetColorModeToMapScalars();
-
-	//SetSondeBathyColor(mySondeBathyColor);
- //   mySondeBathyMapper->Update();
-
- //   mySondeBathyActor = vtkActor::New();
- //   mySondeBathyActor->SetMapper(mySondeBathyMapper);
- //   mySondeBathyActor->GetProperty()->BackfaceCullingOff();
- //   mySondeBathyActor->GetProperty()->FrontfaceCullingOff();
- //   mySondeBathyActor->GetProperty()->SetAmbientColor(0.5, 0.5, 0.5);
- //   mySondeBathyActor->GetProperty()->SetAmbient(0.2);
-	//mySondeBathyActor->SetPosition(0, 0, 0);
-	//mySondeBathyActor->GetProperty()->SetInterpolationToGouraud();
-	//mySondeBathyActor->GetProperty()->SetOpacity(0);
-	//mySondeBathyActor->PickableOff();
-
-
-	//// Sonar based bathymetry.
-	//mySonarBathyReader = vtkPolyDataReader::New();
- //   mySonarBathyReader->SetFileName(sonarBathymetryFile);
- //   mySonarBathyReader->Update();
-
-	////double* range = mySonarBathyReader->GetOutput()->GetBounds();
-	////printf("Sonar Bathy Range: %f-%f %f-%f %f-%f\n", range[0], range[1], range[2], range[3], range[4], range[5]);
-
-	//mySonarBathyMapper = vtkDataSetMapper::New();
-	//mySonarBathyMapper->SetInput(mySonarBathyReader->GetOutput());
-	//mySonarBathyMapper->Update();
-	//mySonarBathyMapper->ScalarVisibilityOff();
-
-	//mySonarBathyActor = vtkActor::New();
-	//mySonarBathyActor->SetVisibility(0);
- //   mySonarBathyActor->SetMapper(mySonarBathyMapper);
-	//mySonarBathyActor->GetProperty()->SetRepresentationToPoints();
-	//mySonarBathyActor->GetProperty()->SetColor(1, 1, 1);
-
- //   // a renderer and render window
- //   renderer->AddActor(myLakeActor);
- //   renderer->AddActor(mySondeBathyActor);
- //   renderer->AddActor(mySonarBathyActor);
-
-	//// Initialize the map overlay.
-	//myOverlayReader = vtkJPEGReader::New();
-	//QString overlayFile = AppConfig::GetInstance()->GetProfileName() + "/overlay.jpg";
-	//myOverlayReader->SetFileName(overlayFile);
-	//myOverlayTexture = vtkTexture::New();
-	//myOverlayTexture->SetInput(myOverlayReader->GetOutput());
-	//myOverlayTexture->InterpolateOn();
-	//myOverlayPlane = vtkPlaneSource::New();
-	//myOverlayPlane->SetOrigin(0, 0, 0);
-	//myOverlayPlane->SetPoint2(0, 0, -1);
-	//myOverlayPlane->SetPoint1(1, 0, 0);
-	//myOverlayMapper = vtkPolyDataMapper::New();
-	//myOverlayMapper->SetInput(myOverlayPlane->GetOutput());
-	//myOverlayActor = vtkActor::New();
-	//myOverlayActor->SetMapper(myOverlayMapper);
-	//myOverlayActor->SetTexture(myOverlayTexture);
-
-	//// TODO: Argh, hardcoded values.
-	//myOverlayActor->SetOrientation(0, 90, 0);
-	//myOverlayActor->SetScale(-2936, 1, -2284);
-	//myOverlayActor->SetPosition(1370239, 0, 434526);
-	//myOverlayActor->GetProperty()->SetOpacity(0);
-	//myOverlayActor->PickableOff();
-	//myOverlayActor->GetProperty()->SetLighting(0);
-
-	//renderer->AddActor(myOverlayActor);
-	//GetVisualizationManager()->Render();
-
-	//DataSet* data = myVizMng->GetDataSet();
-
-	//SetupContours();
-	//SetupUI();
-
-	//// Enable contours on old bathymetry by default.
-	//myUI->oldContoursButton->setChecked(false);
+	QWidget* dock = GetDockWidget()->widget();
+	QVBoxLayout* vbox = (QVBoxLayout*)dock->layout();
+	vbox->addStretch();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -617,59 +695,6 @@ void GeoDataView::SetupUI()
 {
 	myUI = new Ui::GeoDataViewDock();
 	myUI->setupUi(GetDockWidget());
-	//myUI->axesButton->hide();
-
-	// Set dafault values to controls.
- //   myUI->opacitySlider->setValue(100);
- //   myUI->sondeBathyOpacitySlider->setValue(0);
- //   myUI->sondeContoursSlider->setValue(10);
- //   myUI->oldContoursSlider->setValue(10);
-	//myUI->disabledMarkersButton->setChecked(true);
-
-	//myUI->errorMeanLabel->setVisible(false);
-	//myUI->errorStdDevLabel->setVisible(false);
-
-	// Wire events.
- //   connect(myUI->opacitySlider, SIGNAL(valueChanged(int)), 
-	//	SLOT(OpacitySliderChanged(int)));
-
-	//connect(myUI->overlayOpacitySlider, SIGNAL(valueChanged(int)), 
-	//	SLOT(OnOverlayOpacitySliderChanged(int)));
-
-	//connect(myUI->sondeBathyOpacitySlider, SIGNAL(valueChanged(int)), 
-	//	SLOT(SondeBathyOpacitySliderChanged(int)));
-
-	//connect(myUI->axesButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnAxesButtonToggle(bool)));
-
-	//connect(myUI->oldContoursSlider, SIGNAL(sliderReleased()), 
-	//	SLOT(OnOldContoursSliderReleased()));
-
-	//connect(myUI->sondeContoursSlider, SIGNAL(sliderReleased()), 
-	//	SLOT(OnSondeContoursSliderReleased()));
-
-	//connect(myUI->sondeContoursButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnSondeContoursButtonToggle(bool)));
-
-	//connect(myUI->oldContoursButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnOldContoursButtonToggle(bool)));
-
-	//connect(myUI->disabledMarkersButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnShowErrorMarkersButtonToggle(bool)));
-
-	//connect(myUI->oldVsSondeMarkersButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnShowErrorMarkersButtonToggle(bool)));
-
-	//connect(myUI->oldVsSonarMarkersButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnShowErrorMarkersButtonToggle(bool)));
-
-	//connect(myUI->sondeVsSonarMarkersButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnShowErrorMarkersButtonToggle(bool)));
-
-	//connect(myUI->showSonarDataButton, SIGNAL(toggled(bool)), 
-	//	SLOT(OnShowSonarDataButtonToggle(bool)));
-
-	//myUI->errorMarkerBox->setVisible(false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

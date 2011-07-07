@@ -23,13 +23,11 @@ public:
 
 protected slots:
 	void OnSelectedFieldChanged(int i);
-	//void OnSelectedIsoFieldChanged(int i);
+	void OnSelectionApplyClicked();
     void OnShowMissionButtonToggle(bool enabled);
     void OnEndMissionSliderChange(int value);
     void OnStartMissionSliderChange(int value);
 	void OnShowSondeDataButton(bool value);
-	//void OnIsoValueSliderChanged(int value);
-	//void OnShowIsoButtonToggle(bool value);
 	void OnSelectedDateChanged(int);
 
 private:

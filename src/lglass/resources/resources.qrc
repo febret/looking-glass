@@ -4,6 +4,8 @@
     <file>SuiteSplash.png</file>
   </qresource>
   <qresource prefix="icons" >
+    <file>section.png</file>
+    <file>vector.png</file>
     <file>picture_save.png</file>
     <file>refresh.png</file>
     <file>fullview.png</file>
