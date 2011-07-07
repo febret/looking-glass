@@ -45,7 +45,7 @@
     <item>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="title">
-       <string>Missions</string>
+       <string>Time Filter</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
@@ -53,7 +53,7 @@
          <item>
           <widget class="QLabel" name="label_5">
            <property name="text">
-            <string>Mission Set:</string>
+            <string>Dataset:</string>
            </property>
           </widget>
          </item>
@@ -165,68 +165,37 @@
      </widget>
     </item>
     <item>
-     <widget class="QGroupBox" name="isoGroupBox">
+     <widget class="QGroupBox" name="groupBox">
       <property name="title">
-       <string>Isosurfaces</string>
+       <string>Selection</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <item>
-          <widget class="QCheckBox" name="showIsoButton">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Show</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="isoComponentBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Using:</string>
+         </property>
+        </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Value</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSlider" name="isoValueSlider">
-           <property name="maximum">
-            <number>100</number>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDoubleSpinBox" name="isoValueBox">
-           <property name="minimumSize">
-            <size>
-             <width>64</width>
-             <height>0</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <widget class="QComboBox" name="selTypeBox"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Select:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="selExpressionBox"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="selApplyButton">
+         <property name="text">
+          <string>Apply</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

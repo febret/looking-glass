@@ -37,8 +37,8 @@
 #include "DataSet.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#define MAX_PLOT_VIEWS 6
-//#define MAX_THRESHOLD_STAGES 4
+#define MAX_PLOT_VIEWS 4
+#define MAX_SECTION_VIEWS 2
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class VisualizationManager: public VisualizationManagerBase
@@ -59,6 +59,7 @@ public:
 	// Gets an instance of the geo data view object.
 	GeoDataView* GetGeoDataVew();
 	NavigationView* GetNavigationView();
+	LineTool* GetLineTool();
 	void SetDepthScale(int value);
 	// Gets or Sets the currently selected data field
 	void SetSelectedField(int value);
@@ -106,12 +107,14 @@ private:
 	ColorFunctionManager* myColorFunctionManager;
 	GeoDataView* myGeoDataView;
 	PlotView* myPlotView[MAX_PLOT_VIEWS];
+	SectionView* mySectionView[MAX_SECTION_VIEWS];
 	SliceViewer* mySliceViewer;
 	VolumeView* myVolumeView;
 	DataViewOptions* myDataViewOptions;
 	NavigationView* myNavigationView;
 	//DataFieldSettings* myDataFieldSettings;
 	TableView* myTableView;
+	LineTool* myLineTool;
 
     // Main color scale objects.
     vtkScalarBarActor* myScalarBar;
@@ -127,7 +130,7 @@ private:
 	int myPointReductionFactor;
 	vtkMaskPoints* myPointFilter;
 	vtkMaskPoints* mySelectedPointFilter;
-    vtkDataSetMapper* mySondeMapper;
+	vtkDataSetMapper* mySondeMapper;
     vtkActor* mySondeActor;
 
     vtkRenderer* myRenderer;
@@ -153,5 +156,9 @@ inline GeoDataView* VisualizationManager::GetGeoDataVew()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 inline NavigationView* VisualizationManager::GetNavigationView()
 { return myNavigationView; }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+inline LineTool* VisualizationManager::GetLineTool()
+{ return myLineTool; }
 
 #endif // MAINWINDOW_H

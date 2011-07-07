@@ -179,6 +179,8 @@ class VisualizationManager;
 class VisualizationManagerBase;
 class VtkDataManager;
 class pqColorChooserButton;
+class LineTool;
+class SectionView;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #define LOOKING_GLASS_VERSION "2.7"
