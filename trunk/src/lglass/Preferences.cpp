@@ -32,6 +32,11 @@
 #include "AppConfig.h"
 #include "Utils.h"
 
+#include "pqColorMapModel.h"
+#include "pqChartValue.h"
+
+#include <vtkColorTransferFunction.h>
+
 using namespace libconfig;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,7 +51,8 @@ Preferences::Preferences():
 	myPlotLabelFontSize(8),
 	myPlotLegend(true),
 	myPlotPoints(false),
-	myAdjustPlotLabels(true)
+	myAdjustPlotLabels(true),
+	myDepthScale(2.0)
 {
 	myPlotColorModel = new pqColorMapModel();
 	myPlotColorModel->setColorSpaceFromInt(0);
@@ -64,6 +70,14 @@ Preferences::Preferences():
 	if(!pref.exists(name)) pref.add(name, settingType); \
 	pref[name] = (type)var;
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+Setting& Preferences::GetSection(const QString& name)
+{
+	Setting& root = myCfg.getRoot();
+	if(!root.exists(name)) root.add(name, Setting::TypeGroup);
+	return root[name.ascii()];
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void Preferences::Save(Config* cfg)
@@ -97,12 +111,15 @@ void Preferences::Save(Config* cfg)
 		// Save window state.
 		WRITE_SETTING("WindowState", Setting::TypeString, const char*, myWindowState.toBase64());
 
+		WRITE_SETTING("DepthScale", Setting::TypeFloat, float, myDepthScale);
+
 		if(!pref.exists("PlotColors"))
 		{
 			Setting& stPlotColors = pref.add("PlotColors", Setting::TypeGroup);
 		}
 		Setting& stPlotColors = pref["PlotColors"];
-		for(int i = 0; i < stPlotColors.getLength(); i++) stPlotColors.remove(i);
+		int l = stPlotColors.getLength();
+		for(int i = 0; i < l; i++) stPlotColors.remove((unsigned int)0);
 
 		int pts = myPlotColorModel->getNumberOfPoints();
 		for(int i = 0; i < pts; i++)
@@ -111,6 +128,7 @@ void Preferences::Save(Config* cfg)
 			pqChartValue value;
 			myPlotColorModel->getPointColor(i, color);
 			myPlotColorModel->getPointValue(i, value);
+
 			Setting& stPtData = stPlotColors.add(QString("Value%1").arg(i), Setting::TypeArray);
 
 			stPtData.add(Setting::TypeFloat) = (float)value;
@@ -171,6 +189,9 @@ void Preferences::Load(Config* cfg)
 			if(pref.exists("WindowState"))
 				myWindowState = QByteArray::fromBase64((const char*)pref["WindowState"]);
 
+			if(pref.exists("DepthScale"))
+				myDepthScale = pref["DepthScale"];
+
 			if(pref.exists("PlotColors"))
 			{
 				myPlotColorModel->removeAllPoints();
@@ -204,13 +225,12 @@ void Preferences::Load(const char* filename)
 	}
 
 	FILE* stream = fopen(filename, "r");
-	Config cfg;
 	try
 	{
-		cfg.read(stream);
+		myCfg.read(stream);
 
 		// Load preferences.
-		Load(&cfg);
+		Load(&myCfg);
 	}
 	catch(ParseException e)
 	{
@@ -223,7 +243,7 @@ void Preferences::Load(const char* filename)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void Preferences::Save(const char* filename)
 {
-	Config cfg;
-	Save(&cfg);
-	cfg.writeFile(filename);
+	Save(&myCfg);
+	myCfg.writeFile(filename);
 }
+

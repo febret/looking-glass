@@ -1,17 +1,46 @@
-/********************************************************************************************************************** 
+/**************************************************************************************************
  * THE LOOKING GLASS VISUALIZATION TOOLSET
- *---------------------------------------------------------------------------------------------------------------------
+ *-------------------------------------------------------------------------------------------------
  * Author: 
- *	Alessandro Febretti							Electronic Visualization Laboratory, University of Illinois at Chicago
+ *	Alessandro Febretti		Electronic Visualization Laboratory, University of Illinois at Chicago
  * Contact & Web:
- *  febret@gmail.com							http://febretpository.hopto.org
- *---------------------------------------------------------------------------------------------------------------------
+ *  febret@gmail.com		http://febretpository.hopto.org
+ *-------------------------------------------------------------------------------------------------
  * Looking Glass has been built as part of the ENDURANCE Project (http://www.evl.uic.edu/endurance/).
  * ENDURANCE is supported by the NASA ASTEP program under Grant NNX07AM88G and by the NSF USAP.
- *********************************************************************************************************************/ 
+ *-------------------------------------------------------------------------------------------------
+ * Copyright (c) 2010-2011, Electronic Visualization Laboratory, University of Illinois at Chicago
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted 
+ * provided that the following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice, this list of conditions 
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other 
+ * materials provided with the distribution. 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE  GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *************************************************************************************************/ 
 #include "Utils.h"
 #include "RepositoryManager.h"
 #include "DataSet.h"
+
+#include "pqChartValue.h"
+
+#include <QTextStream>
+#include <QFileDialog>
+
+#include <vtkColorTransferFunction.h>
+#include <vtkRenderWindow.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkPNGWriter.h>
 
 extern "C"
 {
@@ -108,4 +137,28 @@ void Utils::UpdateColorTransferFunction(vtkColorTransferFunction* colorTrans, pq
 		double actualValue = val.getDoubleValue();
 		colorTrans->AddRGBPoint(actualValue, color.redF(), color.greenF(), color.blueF());
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void Utils::SerializeColor(const QColor& color, Setting& s, const QString& name)
+{
+	if(s.exists(name)) s.remove(name);
+	Setting& sc = s.add(name, Setting::TypeArray);
+	sc.add(Setting::TypeFloat) = (float)color.red() / 255;
+	sc.add(Setting::TypeFloat) = (float)color.green() / 255;
+	sc.add(Setting::TypeFloat) = (float)color.blue() / 255;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+QColor Utils::DeserializeColor(Setting& s, const QString& name)
+{
+	if(s.exists(name))
+	{
+		Setting& sc = s[name.ascii()];
+		int r = (int)((float)sc[0] * 255);
+		int g = (int)((float)sc[1] * 255);
+		int b = (int)((float)sc[2] * 255);
+		return QColor(r, g, b);
+	}
+	return QColor(0, 0, 0);
 }

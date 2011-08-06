@@ -28,59 +28,120 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************************************/ 
-#ifndef GEODATAVIEW_H
-#define GEODATAVIEW_H
+#ifndef GEODATAITEM_H
+#define GEODATAITEM_H
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "LookingGlassSystem.h"
-#include "DockedTool.h"
-#include "GeoDataItem.h"
 #include "ui_GeoDataViewDock.h"
+#include "ui_GeoDataMeshPanel.h"
+#include "ui_GeoDataImagePanel.h"
+#include "ui_GeoDataPointsPanel.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class DataSet;
 class Ui_MainWindow;
 class VisualizationManager;
+class GeoDataView;
 class vtkActor;
+class vtkElevationFilter;
+class vtkGlyph3D;
+class vtkBoxClipDataSet;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-class GeoDataView: public DockedTool
+class GeoDataItem: public QObject
 {
     Q_OBJECT
 public:
-	static const int MaxGeoDataItems = 64;
+	enum Type { Mesh, PointCloud, Image };
 
 public:
-    /////////////////////////////////////////////////////// Ctor / Dtor.
-    GeoDataView(VisualizationManager* msg);
-    ~GeoDataView();
+	GeoDataItem();
 
-	void SavePreferences(Setting& s);
+	void Initialize(GeoDataView* view, Setting& cfg);
+
 	void LoadPreferences(Setting& s);
+	void SavePreferences(Setting& s);
 
-	void Initialize();
+	Type GetType() { return myType; }
 
-    // Sets the bathymetry depth scale.
+	void SetVisible(bool value);
+
     void SetDepthScale(int value);
 
-	int GetNumItems() { return myNumItems; }
-	GeoDataItem* GetItem(int num) { return myItems[num]; }
+	void GetClipStartPoint(double* point);
+	void GetClipEndPoint(double* point);
 
-	Ui_GeoDataViewDock* GetUI() { return myUI; }
+
+	const QString& GetName() { return myName; }
+	const QString& GetLabel() { return myLabel; }
+
+	QColor GetMainColor() { myMainColor; }
+	QColor GetContourColor() { myContourColor; }
+
+	void SetMainColor(QColor color);
+	void SetContourColor(QColor color);
 
 protected slots:
-	void OnGeoItemBoxChanged(int index);
+	void OnVisibleToggle(bool checked);
+	void OnContourToggle(bool checked);
+	void OnMainColorChanged(const QColor& color);
+	void OnContourColorChanged(const QColor& color);
+	void OnOpacityChanged(double value);
+	void OnRefreshClicked();
+	void OnContourParamsChanged();
+	void OnSelApplyClicked();
+	void OnSelResetClicked();
+	void OnStartPointClicked();
+	void OnEndPointClicked();
 
 private:
-	void SetupUI();
+	void InitMesh(QFile* file, Setting& cfg);
+	void InitPoints(QFile* file, Setting& cfg);
+	void InitImage(QFile* file, Setting& cfg);
+	void InitActorTransform(Setting& cfg);
 
 private:
-	// UI.
-	Ui_GeoDataViewDock* myUI;
-	VisualizationManager* myVizMng;
+	Type myType;
 
-	GeoDataItem* myItems[MaxGeoDataItems];
-	int myNumItems;
+	GeoDataView* myView;
+
+	// Vtk stuff.
+	vtkTexture* myImageTexture;
+	vtkPlaneSource* myImagePlane;
+	vtkDataSetMapper* myMapper;
+	vtkActor* myActor;
+	vtkElevationFilter* myElevationFilter;
+	vtkGlyph3D* myGlyphFilter;
+	vtkContourFilter* myContourFilter;
+	vtkBoxClipDataSet* myClipFilter;
+    vtkPolyDataMapper* myContourMapper;
+    vtkActor* myContourActor;
+
+	QString myName;
+	QString myLabel;
+	QString myFilename;
+
+	// Transform
+	float myScale[3];
+	float myOrientation[3];
+	float myPosition[3];
+
+	bool myVisible;
+	bool myContoursVisible;
+	float myOpacity;
+
+	// Colors
+	QColor myMainColor;
+	QColor myContourColor;
+
+	// UI
+	Ui_GeoDataMeshPanel* myMeshUI;
+	Ui_GeoDataImagePanel* myImageUI;
+	Ui_GeoDataPointsPanel* myPointsUI;
+	pqColorChooserButton* myMainColorButton;
+	pqColorChooserButton* myContourColorButton;
+	QGroupBox* myPanel;
 };
 
 #endif 

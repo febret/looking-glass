@@ -69,6 +69,9 @@ void AppConfig::Save(VisualizationManager* vizMng)
 	// Serialize window state.
 	myPreferences->SetWindowState(vizMng->GetMainWindow()->saveState());
 
+	// Save additional preferences
+	vizMng->SavePreferences(myPreferences);
+
 	myPreferences->Save("./settings.lgcfg");
 
 	// Save config.

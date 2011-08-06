@@ -32,6 +32,10 @@
 #include "ui_MainWindow.h"
 #include "PreferencesWindow.h"
 
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkInteractorObserver.h>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 VisualizationManagerBase::VisualizationManagerBase():
 	myRenderWindow(NULL)

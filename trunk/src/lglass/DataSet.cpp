@@ -37,6 +37,9 @@
 #include  "VtkDataManager.h"
 #include  "Preferences.h"
 
+#include <QTextStream>
+#include <QDateTime>
+
 extern "C"
 {
 #include "eval/evaldefs.h"
@@ -256,7 +259,7 @@ void DataSet::UpdateField(int index)
 void DataSet::LoadFile(const QString& name)
 {
 #ifdef _DEBUG
-	int dataFilter = 10;
+	int dataFilter = DEBUG_DATA_DECIMATION;
 #else
 	int dataFilter = 1;
 #endif

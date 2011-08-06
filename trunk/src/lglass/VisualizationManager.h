@@ -37,10 +37,6 @@
 #include "DataSet.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#define MAX_PLOT_VIEWS 4
-#define MAX_SECTION_VIEWS 2
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 class VisualizationManager: public VisualizationManagerBase
 {
 	Q_OBJECT
@@ -60,7 +56,8 @@ public:
 	GeoDataView* GetGeoDataVew();
 	NavigationView* GetNavigationView();
 	LineTool* GetLineTool();
-	void SetDepthScale(int value);
+	//! Updates the depth scale using the value specified in the Preferences object.
+	void UpdateDepthScale();
 	// Gets or Sets the currently selected data field
 	void SetSelectedField(int value);
 	int GetSelectedField();
@@ -81,8 +78,7 @@ public:
 	void OnStartInteraction();
 	void SetStatusbarMessage(const QString& msg);
 
-public:
-	static const int DefaultDepthScale = 4;
+	void SavePreferences(Preferences* prefs);
 
 protected slots:
 	void OnQuitTrigger(bool);
@@ -94,7 +90,6 @@ private:
     void SetupUI();
     void InitPicking();
 	//void InitIsosurfaces();
-	//void SetSelectedSondeDrop(double X, double Y);
 
 private:
 	// Dataset
@@ -126,7 +121,6 @@ private:
 	int myMouseY;
 
 	// Main sonde data view.
-	float myDepthScale;
 	int myPointReductionFactor;
 	vtkMaskPoints* myPointFilter;
 	vtkMaskPoints* mySelectedPointFilter;
