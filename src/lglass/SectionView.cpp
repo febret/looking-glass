@@ -39,10 +39,25 @@
 #include "ColorFunctionManager.h"
 #include "PointSourceWindow.h"
 
-#include <vtkGenericCutter.h>
-#include <vtkVector.h>
-#include <vtkMath.h>
 
+#include <vtkActor.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkDataSetMapper.h>
+#include <vtkImageData.h>
+#include <vtkGenericCutter.h>
+#include <vtkMath.h>
+#include <vtkPlane.h>
+#include <vtkPointData.h>
+#include <vtkProperty.h>
+#include <vtkScalarBarActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkShepardMethod.h>
+#include <vtkTextProperty.h>
+#include <vtkThreshold.h>
+#include <vtkTransform.h>
+#include <vtkTransformFilter.h>
+#include <vtkVector.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 SectionView::SectionView(VisualizationManager* mng, int index): 

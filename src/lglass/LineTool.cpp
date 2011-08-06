@@ -39,6 +39,8 @@
 #include "vtkLineRepresentation.h"
 #include "vtkLineWidget2.h"
 
+#include <vtkProperty.h>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 VTK_CALLBACK(LineWidgetChangedCallback, LineTool, OnLineWidgetChanged());
 

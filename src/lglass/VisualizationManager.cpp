@@ -48,13 +48,28 @@
 #include "LineTool.h"
 #include "SectionView.h"
 
+#include <vtkActor.h>
+#include <vtkCamera.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkDataSetMapper.h>
+#include <vtkDoubleArray.h>
+#include <vtkInteractorStyleTerrain.h>
+#include <vtkMaskPoints.h>
+#include <vtkPointData.h>
+#include <vtkPointPicker.h>
+#include <vtkProperty.h>
+#include <vtkScalarBarActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkTextProperty.h>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 VTK_CALLBACK(StartInteractionCallback, VisualizationManager, OnStartInteraction());
 VTK_CALLBACK(EndInteractionCallback, VisualizationManager, OnEndInteraction());
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 VisualizationManager::VisualizationManager():
-	myDepthScale(DefaultDepthScale),
 	myDataSet(NULL),
 	myRenderWindow(NULL),
 	myLineTool(NULL),
@@ -139,11 +154,13 @@ void VisualizationManager::Initialize(DataSet* dataSet)
 
 	myPlotView[0]->Enable();
 
+#ifdef ENABLE_SECTION_VIEW
 	for(int i = 0; i < MAX_SECTION_VIEWS; i++)
 	{
 		mySectionView[i] = new SectionView(this, i + 1);
 		mySectionView[i]->Initialize();
 	}
+#endif
 
 	myDataViewOptions = new DataViewOptions(this);
 	myDataViewOptions->Initialize();
@@ -156,20 +173,26 @@ void VisualizationManager::Initialize(DataSet* dataSet)
 
 	// myGeoDataView->SetupBathyErrorMap();
 
+#ifdef ENABLE_NAVIGATION_VIEW
 	myNavigationView = new NavigationView(this);
 	myNavigationView->Initialize();
+#endif
 
+#ifdef ENABLE_SLICE_VIEWER
 	mySliceViewer = new SliceViewer(this);
 	mySliceViewer->Initialize();
+#endif
 
 	PointSourceWindow::Initialize(this);
 
 	myLineTool = new LineTool(this);
 	myLineTool->Initialize();
 
-	/*myDataFieldSettings = new DataFieldSettings(this);
+#ifdef ENABLE_DATA_FIELD_SETTINGS
+	myDataFieldSettings = new DataFieldSettings(this);
 	myDataFieldSettings->Initialize();
-	myDataFieldSettings->Enable();*/
+	myDataFieldSettings->Enable();
+#endif
 
 	// Set the main view interactor to terrain.
 	vtkInteractorStyleTerrain* terrainInteractor = vtkInteractorStyleTerrain::New();
@@ -180,7 +203,7 @@ void VisualizationManager::Initialize(DataSet* dataSet)
 	SetupUI();
 
 	// Initialize the depth scale for all objects.
-	SetDepthScale(myDepthScale);
+	UpdateDepthScale();
 
 	myRenderer->GetActiveCamera()->ParallelProjectionOn();
 	myRenderer->ResetCamera();
@@ -196,6 +219,9 @@ void VisualizationManager::Initialize(DataSet* dataSet)
 	{
 		GetMainWindow()->restoreState(prefs->GetWindowState());
 	}
+
+	// Load geo data view preferences.
+	myGeoDataView->LoadPreferences(prefs->GetSection("GeoDataView"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -352,9 +378,9 @@ void VisualizationManager::SetPointReductionFactor(int factor)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-void VisualizationManager::SetDepthScale(int value)
+void VisualizationManager::UpdateDepthScale()
 {
-	myDepthScale = value;
+	float value = AppConfig::GetInstance()->GetPreferences()->GetDepthScale();
 	/*if(mySliceView != NULL && mySliceView->IsEnabled())
 	{
 		mySliceView->SetDepthScale(value);
@@ -365,6 +391,12 @@ void VisualizationManager::SetDepthScale(int value)
 	//myIsosurfaceActor->SetScale(1, (float)value / DataSet::SLICE_SEPARATION, 1);
 	//myIsosurfaceActor->SetScale(1, myDepthScale, 1);
     //GetUI()->vtkView->GetRenderWindow()->Render();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void VisualizationManager::SavePreferences(Preferences* prefs)
+{
+	myGeoDataView->SavePreferences(prefs->GetSection("GeoDataView"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

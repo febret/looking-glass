@@ -1,4 +1,33 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/**************************************************************************************************
+ * THE LOOKING GLASS VISUALIZATION TOOLSET
+ *-------------------------------------------------------------------------------------------------
+ * Author: 
+ *	Alessandro Febretti		Electronic Visualization Laboratory, University of Illinois at Chicago
+ * Contact & Web:
+ *  febret@gmail.com		http://febretpository.hopto.org
+ *-------------------------------------------------------------------------------------------------
+ * Looking Glass has been built as part of the ENDURANCE Project (http://www.evl.uic.edu/endurance/).
+ * ENDURANCE is supported by the NASA ASTEP program under Grant NNX07AM88G and by the NSF USAP.
+ *-------------------------------------------------------------------------------------------------
+ * Copyright (c) 2010-2011, Electronic Visualization Laboratory, University of Illinois at Chicago
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted 
+ * provided that the following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice, this list of conditions 
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright 
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other 
+ * materials provided with the distribution. 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE  GOODS OR SERVICES; LOSS OF 
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *************************************************************************************************/ 
 #include "AppConfig.h"
 #include "Preferences.h"
 #include "PreferencesWindow.h"
@@ -9,6 +38,10 @@
 #include "pq/pqColorChooserButton.h"
 #include "Utils.h"
 #include "VtkDataManager.h"
+
+#include "pqColorMapWidget.h"
+
+#include <QColorDialog>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 PreferencesWindow::PreferencesWindow(VisualizationManager* mng):
@@ -90,20 +123,13 @@ void PreferencesWindow::Update()
 
 	GeoDataView* gdv = myVizMng->GetGeoDataVew();
 	myUI->reductionSlider->setValue(myVizMng->GetPointReductionFactor());
-	//myOldBathyColorButton->setChosenColor(gdv->GetOldBathyColor());
-	//mySondeBathyColorButton->setChosenColor(gdv->GetSondeBathyColor());
-	//myOldBathyContourButton->setChosenColor(gdv->GetOldBathyContourColor());
-	//mySondeBathyContourButton->setChosenColor(gdv->GetSondeBathyContourColor());
 
-	//myUI->xLabelsBox->setValue(pref->GetPlotXLabels());
-	//myUI->yLabelsBox->setValue(pref->GetPlotYLabels());
 	myUI->labelFontSizeBox->setValue(pref->GetPlotLabelFontSize());
 
 	myPlotBackgroundButton->setChosenColor(pref->GetPlotBackgroundColor());
 	myPlotForegroundButton->setChosenColor(pref->GetPlotForegroundColor());
 	myPlotDataDefaultButton->setChosenColor(pref->GetPlotDefaultDataColor());
 
-	//myUI->plotAdjustLabelsChoice->setChecked(pref->GetAdjustPlotLabels());
 	myUI->plotLegendChoice->setChecked(pref->GetPlotLegend());
 	myUI->plotPointsChoice->setChecked(pref->GetPlotPoints());
 
@@ -111,6 +137,8 @@ void PreferencesWindow::Update()
 
 	myUI->plotGroupingBox->setCurrentIndex(pref->GetGroupingTagId());
 	myUI->plotSourceBox->setCurrentIndex(pref->GetGroupingSubset());
+
+	myUI->scaleSlider->setValue((int)pref->GetDepthScale());
 
 	myIsUpdating = false;
 }
@@ -137,24 +165,15 @@ void PreferencesWindow::OnOkButtonClick()
 	GeoDataView* gdv = myVizMng->GetGeoDataVew();
 	NavigationView* mr = myVizMng->GetNavigationView();
 	myVizMng->SetPointReductionFactor(myUI->reductionSlider->value());
-	//gdv->SetOldBathyColor(myOldBathyColorButton->chosenColor());
-	//gdv->SetOldBathyContourColor(myOldBathyContourButton->chosenColor());
-	//gdv->SetSondeBathyColor(mySondeBathyColorButton->chosenColor());
-	//gdv->SetSondeBathyContourColor(mySondeBathyContourButton->chosenColor());
-	//mr->SetMissionPathColor(myMissionPathButton->chosenColor());
 
-	//pref->SetPlotXLabels(myUI->xLabelsBox->value());
-	//pref->SetPlotYLabels(myUI->yLabelsBox->value());
 	pref->SetPlotLabelFontSize(myUI->labelFontSizeBox->value());
 
 	pref->SetPlotForegroundColor(myPlotForegroundButton->chosenColor());
 	pref->SetPlotBackgroundColor(myPlotBackgroundButton->chosenColor());
 	pref->SetPlotDefaultDataColor(myPlotDataDefaultButton->chosenColor());
 
-	myVizMng->SetDepthScale(myUI->scaleSlider->value());
 
 	pref->SetPlotLegend(myUI->plotLegendChoice->isChecked());
-	//pref->SetAdjustPlotLabels(myUI->plotAdjustLabelsChoice->isChecked());
 	pref->SetPlotPoints(myUI->plotPointsChoice->isChecked());
 
 	DataSet::SubsetType subset = (DataSet::SubsetType)myUI->plotSourceBox->currentIndex();
@@ -162,6 +181,9 @@ void PreferencesWindow::OnOkButtonClick()
 
 	pref->SetGroupingSubset(subset);
 	pref->SetGroupingTagId(tagId);
+
+	pref->SetDepthScale(myUI->scaleSlider->value());
+	myVizMng->UpdateDepthScale();
 
 	Utils::UpdateColorTransferFunction(pref->GetPlotColorTransferFunction(), pref->GetPlotColorModel());
 

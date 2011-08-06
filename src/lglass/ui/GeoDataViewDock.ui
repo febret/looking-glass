@@ -14,7 +14,11 @@
    <string>Geo Data</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
-   <layout class="QVBoxLayout" name="verticalLayout"/>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QComboBox" name="geoItemBox"/>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>

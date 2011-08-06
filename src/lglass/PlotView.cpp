@@ -42,6 +42,20 @@
 #include "vtkAxisActor2D.h"
 #include "vtkLegendBoxActor.h"
 
+#include <QmessageBox>
+
+#include <vtkAttributeDataToFieldDataFilter.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkFieldData.h>
+#include <vtkFloatArray.h>
+#include <vtkInteractorStyleRubberband2D.h>
+#include <vtkPointData.h>
+#include <vtkPointSet.h>
+#include <vtkProperty2D.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkTextProperty.h>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 VTK_CALLBACK(SelectionChangedCallback, PlotView, OnSelectionChanged(reinterpret_cast<int*>(data)));
 

@@ -78,6 +78,7 @@ SET( Srcs
         DataSet.cpp
         DataSetInfo.cpp
         DockedTool.cpp
+        GeoDataItem.cpp
         GeoDataView.cpp
         LineTool.cpp
         Main.cpp
@@ -110,6 +111,7 @@ SET( Headers
         DataSet.h
         DataSetInfo.h
         DockedTool.h
+        GeoDataItem.h
         GeoDataView.h
         LineTool.h
         LookingGlassSystem.h

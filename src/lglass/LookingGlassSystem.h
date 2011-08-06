@@ -31,6 +31,19 @@
 #ifndef LOOKINGGLASSSYSTEM_H
 #define LOOKINGGLASSSYSTEM_H
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Program configuration
+#define MAX_PLOT_VIEWS 4
+#define ENABLE_NAVIGATION_VIEW
+//#define ENABLE_SLICE_VIEWER
+//#define ENABLE_DATA_FIELD_SETTINGS
+//#define ENABLE_SECTION_VIEW
+#define MAX_SECTION_VIEWS 2
+// The data decimation amout when the program is running in debug mode. Used to speed up loading.
+#define DEBUG_DATA_DECIMATION 10
+// KLUDGE_CONTOUR_OFFSET is used to avoid z fighting when displaying contours.
+#define KLUDGE_CONTOUR_OFFSET 1.0
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // USe secure std functions when compiling with visual studio, and disable additional secure warnings.
@@ -50,98 +63,25 @@
 #include <stdio.h>
 #include <string>
 #include <cmath>
+#include <vector>
 #include <fstream>
 #include<limits>
 #include<time.h>
 
-// QT
-#include <QFile>
-#include <QtGui/QtGui>
-#include <QtNetwork/QtNetwork>
+// QT Includes
 #include <QObject>
-#include <QQueue>
-#include <QTextStream>
-#include <QTimer>
-
-// VTK
-#include <vtkActor.h>
-#include <vtkAttributeDataToFieldDataFilter.h>
-#include <vtkAxesActor.h>
-#include <vtkCubeSource.h>
-#include <vtkContourFilter.h>
-#include <vtkDoubleArray.h>
-#include <vtkInteractorStyleTerrain.h>
-#include <vtkRenderWindow.h>
-#include <vtkUnstructuredGridReader.h>
-#include <vtkAlgorithmOutput.h>
-#include <vtkCamera.h>
-#include <vtkCellArray.h>
-#include <vtkCylinderSource.h>
-#include <vtkCutter.h>
-#include <vtkColorTransferFunction.h>
-#include <vtkCommand.h>
-#include <vtkClipVolume.h>
-#include <vtkFloatArray.h>
-#include <vtkImageData.h>
-#include <vtkImplicitPlaneRepresentation.h>
-#include <vtkImplicitPlaneWidget2.h>
-#include <vtkInteractorStyleTerrain.h>
-#include <vtkLineWidget.h>
-#include <vtkAxes.h>
-#include <vtkDataSetMapper.h>
-#include <vtkDelaunay2D.h>
-#include <vtkFieldData.h>
-#include <vtkJPEGReader.h>
-#include <vtkGlyph3D.h>
-#include <vtkImageShiftScale.h>
-#include <vtkLookupTable.h>
-#include <vtkMaskPoints.h>
-#include <vtkMarchingContourFilter.h>
-#include <vtkOutlineFilter.h>
-#include <vtkParticleReader.h>
-#include <vtkPieceWiseFunction.h>
-#include <vtkPlane.h>
-#include <vtkPNGReader.h>
-#include <vtkPNGWriter.h>
-#include <vtkPointData.h>
-#include <vtkPointPicker.h>
-#include <vtkPointSet.h>
-#include <vtkPolyData.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkPolyDataNormals.h>
-#include <vtkPolyDataReader.h>
-#include <vtkPolyDataWriter.h>
-#include <vtkProbeFilter.h>
-#include <vtkProperty2D.h>
-#include <vtkThreshold.h>
-#include <vtkThresholdPoints.h>
-#include <vtkPlaneSource.h>
-#include <vtkProp.h>
-#include <vtkProperty.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkScalarBarActor.h>
-#include <vtkSphereSource.h>
-#include <vtkShepardMethod.h>
-#include <vtkLoopSubdivisionFilter.h>
-#include <vtkTextActor.h>
-#include <vtkTexture.h>
-#include <vtkTextProperty.h>
-#include <vtkTransform.h>
-#include <vtkTransformFilter.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkVolume.h>
-#include <vtkVolumeProperty.h>
-#include <vtkVolumeRayCastMapper.h>
-#include <vtkColorTransferFunction.h>
-#include <vtkVolumeRayCastCompositeFunction.h>
-#include <vtkWindowToImageFilter.h>
-#include <vtkInteractorStyleRubberBand2D.h>
+#include <QString>
+#include <QFile>
+//#include <QtGui/QtGui>
+//#include <QtNetwork/QtNetwork>
+//#include <QQueue>
+//#include <QTextStream>
+//#include <QTimer>
 
 // Paraview QT widgets
-#include "pq/pqChartValue.h"
-#include "pq/pqColorMapModel.h"
-#include "pq/pqColorMapWidget.h"
+//#include "pq/pqChartValue.h"
+//#include "pq/pqColorMapModel.h"
+//#include "pq/pqColorMapWidget.h"
 
 // Libconfig
 #include "libconfig.hh"
@@ -181,6 +121,88 @@ class VtkDataManager;
 class pqColorChooserButton;
 class LineTool;
 class SectionView;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Forward declaration of VTK classes
+class vtkActor;
+class vtkAttributeDataToFieldDataFilter;
+class vtkAxesActor;
+class vtkCubeSource;
+class vtkContourFilter;
+class vtkDoubleArray;
+class vtkInteractorStyleTerrain;
+class vtkInteractorObserver;
+class vtkRenderWindow;
+class vtkUnstructuredGridReader;
+class vtkAlgorithmOutput;
+class vtkCamera;
+class vtkCellArray;
+class vtkCylinderSource;
+class vtkCutter;
+class vtkColorTransferFunction;
+class vtkCommand;
+class vtkClipVolume;
+class vtkFloatArray;
+class vtkImageData;
+class vtkImplicitPlaneRepresentation;
+class vtkImplicitPlaneWidget2;
+class vtkInteractorStyleTerrain;
+class vtkLineWidget;
+class vtkAxes;
+class vtkDataObject;
+class vtkDataSetMapper;
+class vtkDelaunay2D;
+class vtkFieldData;
+class vtkJPEGReader;
+class vtkGlyph3D;
+class vtkImageShiftScale;
+class vtkLookupTable;
+class vtkMaskPoints;
+class vtkMarchingContourFilter;
+class vtkOutlineFilter;
+class vtkParticleReader;
+class vtkPieceWiseFunction;
+class vtkPlane;
+class vtkPNGReader;
+class vtkPNGWriter;
+class vtkPointData;
+class vtkPointPicker;
+class vtkPointSet;
+class vtkPolyData;
+class vtkPolyDataMapper;
+class vtkPolyDataNormals;
+class vtkPolyDataReader;
+class vtkPolyDataWriter;
+class vtkProbeFilter;
+class vtkProperty2D;
+class vtkThreshold;
+class vtkThresholdPoints;
+class vtkPlaneSource;
+class vtkProp;
+class vtkProperty;
+class vtkRenderer;
+class vtkRenderWindow;
+class vtkScalarBarActor;
+class vtkSphereSource;
+class vtkShepardMethod;
+class vtkLoopSubdivisionFilter;
+class vtkTextActor;
+class vtkTexture;
+class vtkTextProperty;
+class vtkTransform;
+class vtkTransformFilter;
+class vtkUnstructuredGrid;
+class vtkVolume;
+class vtkVolumeProperty;
+class vtkVolumeRayCastMapper;
+class vtkColorTransferFunction;
+class vtkVolumeRayCastCompositeFunction;
+class vtkWindowToImageFilter;
+class vtkInteractorStyleRubberBand2D;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class pqColorChooserButton;
+class pqColorMapWidget;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #define LOOKING_GLASS_VERSION "2.7"
