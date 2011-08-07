@@ -1,5 +1,19 @@
 #summary Looking glass release history
 
+= Looking Glass 2.7 =
+ * Major improvements to plot views:
+   * Added support to specify precise data ranges
+   * Customizable major and minor tick intervals
+   * Customizable reference lines for the X and Y axes
+ * Added data query functionality to view options: Now it is possible to enter strings containing lists of station names (i.e.: *F3,F4,E5*) to select stations, instead of having to click on them in the 3d view.
+ * Added a new and customizable geographic data viewer. Supports unlimited image overlays, 3d meshes and point sets. Each 3d model can be cunfigured and clipped separately.
+ * Added a line tool. It allows to graphically specify intervals in the 3d view and use them for clipping geographic data.
+== Issues ==
+ * Plot line colors may turn out incorrect when enabling and disabling reference lines. Re-selecting the data usually fixes this
+ * Slice viewer and Navigation View tools have been disabled in this version of Looking Glass.
+ 
+-------------------------------------------------------------
+
 = Looking Glass 2.6.1 =
 First version on google code. No significant code changes, just fixed some minor dataset issues
 -------------------------------------------------------------
